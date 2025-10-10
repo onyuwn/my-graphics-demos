@@ -8,12 +8,12 @@ const clock = new THREE.Clock();
 const leafTx1 = new THREE.TextureLoader().load('/ceiling1.png');
 const skyTx = new THREE.TextureLoader().load('/sky.png');
 
-var rendererWScale = 1;
+var rendererWScale = 1.125;
 var rendererHScale = 1;
 let treeBuilderContainer = document.getElementById("treeBuilderRoot");
 console.warn(treeBuilderContainer);
-var rendererWidth = (treeBuilderContainer.clientWidth - (treeBuilderContainer.style.padding * 4)) / rendererWScale;
-var rendererHeight = (treeBuilderContainer.clientHeight - (treeBuilderContainer.style.padding * 2)) / rendererHScale;
+var rendererWidth = (treeBuilderContainer.clientWidth) / rendererWScale;
+var rendererHeight = (treeBuilderContainer.clientHeight) / rendererHScale;
 var mouseX = 0;
 var mouseY = 0;
 
@@ -25,6 +25,8 @@ camera.position.y = 2;
 
 var rendererCanvas = document.getElementById("renderer-canvas");
 const renderer = new THREE.WebGLRenderer({ antialias: false, canvas: rendererCanvas });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.aspect = rendererWidth / rendererHeight;
 renderer.setSize(rendererWidth, rendererHeight);
 
 function getLeafUniforms(shellIndex, shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex) {
@@ -63,7 +65,7 @@ function getLeafMaterial(shellIndex, shellCount, shellLength, shellDensity, shel
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 world_pos = (modelViewMatrix * vec4(position, 1.0)).xyz;
                 gl_Position.y += (shellLength * h);
-                gl_Position.x += .05 * cos(time + float(shellIndex) + world_pos.x);
+                gl_Position.x += .05 * cos(time + float(shellIndex) + world_pos.y);
                 gl_Position.z += .05 * sin(time + float(shellIndex) + world_pos.y);
             }
         `,
@@ -111,43 +113,51 @@ function getLeafMaterial(shellIndex, shellCount, shellLength, shellDensity, shel
 }
 
 const modelLoader = new GLTFLoader();
-let treeModel = undefined;
+//let treeModel = undefined;
 
 
-function loadTree(shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex) {
+function loadTree(shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex, treeCount, taperLeaves) {
     scene.clear();
-    modelLoader.load(
-        '/tree.glb',
-        (gltf) => {
-            scene.add(gltf.scene);
-            scene.add(light);
-            treeModel = gltf.scene;
-            treeModel.rotation.y -= 3.14 / 2;
-            treeModel.position.z = -5;
-            treeModel.scale.x *= .25;
-            treeModel.scale.y *= .25;
-            treeModel.scale.z *= .25;
-            treeModel.traverse((child) => {
-                if(child.isMesh && child.name.toLowerCase().includes("icosphere")) {
-                    child.material = getLeafMaterial(0, shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex);
-                    for(let i = 0; i < shellCount; i++) {
-                        let dupe = child.clone();
-                        let shellDist = (i / shellCount) * shellLength;
-                        //dupe.position.y-= shellDist;
-                        // dupe.scale.x *= 1.0 - (i / shellCount);
-                        // dupe.scale.y *= 1.0 - (i / shellCount);
-                        // dupe.scale.z *= 1.0 - (i / shellCount);
-                        dupe.material = getLeafMaterial(i, shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex);
-                        treeModel.add(dupe);
-                    }
+    scene.add(light);
+    for(let j = 0; j < treeCount; j++) {
+        modelLoader.load(
+            '/tree.glb',
+            (gltf) => {
+                scene.add(gltf.scene);
+                let treeModel = gltf.scene;
+                treeModel.rotation.y -= 3.14 / 2;
+                treeModel.position.z = -5;
+                if(treeCount > 1) {
+                    let flipFlop = j % 2 == 0 ? 1 : -1;
+                    treeModel.position.x += flipFlop*j;
+                    treeModel.position.z += -1.5 * Math.sin(flipFlop*j*(Math.PI/2.0));
                 }
-            });
-        },
-        undefined,
-        (error) => {
-            console.error(error);
-        }
-    );
+                treeModel.scale.x *= .25;
+                treeModel.scale.y *= .25;
+                treeModel.scale.z *= .25;
+                treeModel.traverse((child) => {
+                    if(child.isMesh && child.name.toLowerCase().includes("icosphere")) {
+                        child.material = getLeafMaterial(0, shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex);
+                        for(let i = 0; i < shellCount; i++) {
+                            let dupe = child.clone();
+                            //let shellDist = (i / shellCount) * shellLength;
+                            if(taperLeaves == true) {
+                                dupe.scale.x *= 1.0 - (i / shellCount);
+                                dupe.scale.y *= 1.0 - (i / shellCount);
+                                dupe.scale.z *= 1.0 - (i / shellCount);
+                            }
+                            dupe.material = getLeafMaterial(i, shellCount, shellLength, shellDensity, shellNoiseMin, shellNoiseMax, shellAttenuation, leafColorHex);
+                            treeModel.add(dupe);
+                        }
+                    }
+                });
+            },
+            undefined,
+            (error) => {
+                console.error(error);
+            }
+        );
+    }
 }
 
 scene.background = skyTx;
@@ -156,8 +166,6 @@ const light = new THREE.RectAreaLight(0xffffff, 5, 100, 100);
 light.position.set(1, 1, 1).normalize();
 
 scene.add(light);
-
-loadTree(10, 1.0);
 
 function mainRender() {
     requestAnimationFrame(mainRender);
@@ -168,9 +176,9 @@ function mainRender() {
         }
     });
 
-    if(treeModel) {
-        treeModel.rotation.y += THREE.MathUtils.degToRad(.05);
-    }
+    // if(treeModel) {
+    //     //treeModel.rotation.y += THREE.MathUtils.degToRad(.05);
+    // }
 
     renderer.render(scene, camera);
 }
@@ -182,41 +190,66 @@ let curNoiseMin = 0.0;
 let curNoiseMax = 0.0;
 let curAttenuation = 1.0;
 let leafColorHex = "";
+let treeCount = 1.0;
+let taperLeaves = false;
 
 document.getElementById("leafLengthControl").addEventListener('change', function(event) {
     curShellLength = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
 document.getElementById("leafCountControl").addEventListener('change', function(event) {
     curShellCount = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
     document.getElementById("leafCountInput").value = curShellCount;
 });
 
 document.getElementById("leafDensityControl").addEventListener('change', function(event) {
     curShellDensity = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
 document.getElementById("leafNoiseMinControl").addEventListener('change', function(event) {
     curNoiseMin = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
 document.getElementById("leafNoiseMaxControl").addEventListener('change', function(event) {
     curNoiseMax = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
 document.getElementById("leafLengthAttenuationControl").addEventListener('change', function(event) {
     curAttenuation = +(event.target.value);
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
 document.getElementById("leafColorControl").addEventListener('change', function(event) {
     leafColorHex = event.target.value.replace("#", "0x");
-    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex);
+    updateTree();
 });
 
+document.getElementById("treeCountControl").addEventListener('change', function(event) {
+    treeCount = +(event.target.value);
+    updateTree();
+});
+
+document.getElementById("treeTaperControl").addEventListener('change', function(event) {
+    taperLeaves = event.target.checked;
+    updateTree();
+});
+
+window.addEventListener('resize', () => {
+    var rendererWidth = treeBuilderContainer.clientWidth / rendererWScale;
+    var rendererHeight = treeBuilderContainer.clientHeight / rendererHScale;
+    camera.aspect = rendererWidth / rendererHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(rendererWidth, rendererHeight);
+});
+
+function updateTree() {
+    loadTree(curShellCount, curShellLength, curShellDensity, curNoiseMin, curNoiseMax, curAttenuation, leafColorHex, treeCount, taperLeaves);
+}
+
+updateTree();
 mainRender();

@@ -20,6 +20,7 @@
                 <div class="treeBuilderControl">
                     <p>Leaf Length</p>
                     <input id="leafLengthControl" type="range" min="-1.0" max="1.0" step=".05" />
+                    <input type="number" id="leafLengthInput" />
                 </div>
                 <div class="treeBuilderControl">
                     <p>Leaf Count</p>
@@ -29,23 +30,37 @@
                 <div class="treeBuilderControl">
                     <p>Leaf Density</p>
                     <input id="leafDensityControl" type="range" min="0.0" max="1000.0" step=".05" />
+                    <input type="number" id="leafDensityInput" />
                 </div>
                 <div class="treeBuilderControl">
                     <p>Leaf Noise Min</p>
                     <input id="leafNoiseMinControl" type="range" min="-1000.0" max="1000.0" step=".05" />
+                    <input type="number" id="leafNoiseMinInput" />
                 </div>
                 <div class="treeBuilderControl">
                     <p>Leaf Noise Max</p>
                     <input id="leafNoiseMaxControl" type="range" min="-1000.0" max="1000.0" step=".05" />
+                    <input type="number" id="leafNoiseMaxInput" />
                 </div>
                 <div class="treeBuilderControl">
                     <p>Leaf Length Attenuation</p>
-                    <input id="leafLengthAttenuationControl" type="range" min="-4.0" max="4.0" step=".05" />
+                    <input id="leafLengthAttenuationControl" type="range" min="-3.0" max="3.0" step=".05" value="1.0" />
+                    <input type="number" id="leafAttenuationInput" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>tree count</p>
+                    <input type="range" min="1" max="10" step="1" id="treeCountControl" value="1" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>taper?</p>
+                    <input type="checkbox" id="treeTaperControl" />
                 </div>
                 <div class="treeBuilderControl">
                     <p>Leaf Color</p>
                     <input type="color" id="leafColorControl" />
                 </div>
+                <!-- leaf tx -->
+                <!-- tree shape -->
             </div>
             <div id="contentRoot">
                 <div class="post" id="treeBuilderRoot">
