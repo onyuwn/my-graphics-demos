@@ -33,12 +33,16 @@ const fragmentShaderSource = `
     }
 
     void main() {
-        gl_FragColor = texture2D(uSampler, vTextureCoord);
+        vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
+        gl_FragColor = texture2D(uSampler, uv);
         float transitionStart = (sequenceItemStartTime + sequenceItemLength) - transitionTime;
         if(transitionType == 1 && time >= transitionStart)
         {
             gl_FragColor.a -= (time - transitionStart) / transitionTime;
             //gl_FragColor *= cos(time * 10.0);
+        }
+        else if(transitionType == 2 && time >= transitionStart) {
+            gl_FragColor *= (random2(vTextureCoord + time).x - (time - transitionStart));
         }
         //gl_FragColor.a = time;
     }
@@ -145,10 +149,20 @@ let pixelsPerSecond = 25;
 let transitionOptions = ["cut", "fade", "disolve"];
 
 let needCapture = false;
-let requestedCaptureFrames = 10;
+let requestedCaptureFrames = 100;
 let finalFrames = [];
 let gifProcessing = false;
 let gifRendering = false;
+
+let outGif = new GIF({
+    workers: 1,
+    quality: 10,
+    width:128,
+    height:128,
+    workerScript: 'dist/gif.worker.js'
+});
+
+let frameRate = 15;
 
 function main() {
     const canvas = document.querySelector("#gl-canvas");
@@ -196,23 +210,30 @@ function main() {
 
     let then = 0;
 
-    const gif = new GIF({
-        workers: 1,
-        quality: 10,
-        width:128,
-        height:128,
-        workerScript: 'dist/gif.worker.js'
-    });
-    gif.on('progress', function(progress) {
+    outGif.on('progress', function(progress) {
         console.warn("progress")
         console.warn(progress);
+
+        let progressBarSearch = document.getElementById("viewport");
+
+        if(progressBarSearch) {
+            //progressBarSearch.style.background=`radial-gradient(circle at center, rgb(169, 78, 255) ${progress * 100}%, url('/uipamnel1.png') ${100 - (progress * 100)}%)`;
+            progressBarSearch.style.background = `radial-gradient(circle at center, rgb(25, 255, 0) ${progress * 100}%, transparent ${100 - (progress * 100)}%), url('/uipamnel1.png') 100% center / cover`
+        } else {
+            let newProgressBar = document.createElement("div");
+            newProgressBar.id = "exportProgressBar";
+            document.getElementById("viewport").appendChild(newProgressBar);
+        }
+
     });
-    gif.on('finished', function(blob) {
+    outGif.on('finished', function(blob) {
         console.warn("GIFF");
         window.open(URL.createObjectURL(blob));
         gifRendering = false;
         needCapture = false;
         gifProcessing = false;
+        document.getElementById("sequencerStartStop").disabled = false;
+        document.getElementById("sequencerRestart").disabled = false;
     });
 
     function render(now) {
@@ -244,16 +265,17 @@ function main() {
                     img.src = URL.createObjectURL(blob);
 
                     img.onload = () => {
-                        gif.addFrame(img, {delay: 250});
+                        let frameDelay = (getTotalSequenceLength() * 1000) / requestedCaptureFrames;
+                        outGif.addFrame(img, {delay: Math.round(frameDelay)});
                         needCapture = true;
                     }
                 });
             }
         } else {
-            if(gif.frames.length >= requestedCaptureFrames && gifRendering == false) {
+            if(outGif.frames.length >= requestedCaptureFrames && gifRendering == false && gifProcessing == true) {
                 gifRendering = true;
                 console.warn("GIFF");
-                gif.render();
+                outGif.render();
             }
         }
 
@@ -279,6 +301,162 @@ function getTotalSequenceLength() {
 function getSequencerOffset() {
     let sequencerDiv = document.getElementById("sequencerTimeline");
     return sequencerDiv.offsetLeft;
+}
+
+let defaultLength = 4.0;
+let defaultTransitionTime = 1.0;
+let selectedSequenceItem = undefined;
+
+function addItemToSequence(file, texture, imgData) {
+    console.warn(sequenceImages);
+    console.warn(`sequencelenfght: ${sequenceImages.length}`);
+    sequenceImages.push(
+        {
+            name:file.name,
+            texture:texture,
+            imgData:imgData,
+            startTime:getTotalSequenceLength(),
+            length:defaultLength,
+            id:sequenceImages.length,
+            transitionType: 0,
+            transitionTime: defaultTransitionTime
+        }
+    );
+
+    createNewSequenceItem(file.name, imgData, defaultLength, defaultTransitionTime, sequenceImages.length - 1);
+    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
+    requestedCaptureFrames = frameRate * getTotalSequenceLength();
+}
+
+function updateTimeline() {
+    for(let i = 0; i < sequenceImages.length; i++) {
+        let curTexture = sequenceImages[i];
+        curTexture.id = i;
+        createNewSequenceItem(curTexture.name, curTexture.imgData, curTexture.length, curTexture.transitionTime, i);
+    }
+    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
+}
+
+function createNewSequenceItem(name, imgData, length, transitionTime, sequenceIndex) {
+    let newSequenceItem = document.createElement("div");
+    let sequenceThumbnail = document.createElement("img")
+    let sequenceItemName = document.createElement("p");
+    newSequenceItem.className = "sequenceItemPlaceholder";
+    newSequenceItem.style.background = `linear-gradient(to right, rgb(169, 78, 255) ${((length - transitionTime) / length) * 100}%, rgb(41, 0, 79))`
+    //newSequenceItem.style.background = `rgb(169, 78, 255)`
+    newSequenceItem.style.width = length * pixelsPerSecond;
+    sequenceItemName.innerHTML = name;
+    sequenceItemName.className = "sequenceItemName";
+    sequenceThumbnail.src = imgData;
+    sequenceThumbnail.className = "sequenceThumbnail";
+    newSequenceItem.id = sequenceIndex;
+    newSequenceItem.appendChild(sequenceItemName);
+    newSequenceItem.appendChild(sequenceThumbnail);
+    //newSequenceItem.appendChild(createTransitionSelection(sequenceIndex));
+    document.getElementById("clipLayer1").appendChild(newSequenceItem);
+    newSequenceItem.addEventListener("click", setSelectedSequenceItem);
+}
+
+function createTransitionSelection(sequenceItemId) {
+    let transitionSelectionDropdown = document.createElement("div");
+    let transitionSelectionInput = document.createElement("select");
+    transitionSelectionInput.id = sequenceItemId;
+    transitionSelectionInput.addEventListener("change", updateSequenceItemTransition);
+    for(let i = 0; i < transitionOptions.length; i++) {
+        let optionName = transitionOptions[i];
+        let optionElement = document.createElement("option");
+        optionElement.value = i;
+        optionElement.innerHTML = optionName
+        transitionSelectionInput.appendChild(optionElement);
+    }
+    transitionSelectionDropdown.appendChild(transitionSelectionInput);
+    return transitionSelectionDropdown;
+}
+
+function updateSequenceItemTransition(e) {
+    console.warn(e.target.value);
+    selectedSequenceItem.transitionType = +(e.target.value);
+}
+
+function setSelectedSequenceItem(e) {
+    if(selectedSequenceItem) {
+        document.getElementById(`${selectedSequenceItem.id}`).classList.remove("selected");
+    }
+    console.warn(e.target.id);
+    selectedSequenceItem = sequenceImages[+(e.target.id)]
+    document.getElementById(`${e.target.id}`).classList.add("selected");
+    updateClipNameLabel(selectedSequenceItem.name);
+    updateClipLengthInputValue(selectedSequenceItem.length);
+    updateTransitionTypeInputValue(selectedSequenceItem.transitionType);
+    updateTransitionLengthInputValue(selectedSequenceItem.transitionTime);
+}
+
+function updateClipNameLabel(name) {
+    document.getElementById("clipNameLabel").innerHTML=name;
+}
+
+function updateClipLengthInputValue(length) {
+    document.getElementById("clipLengthInput").value = +(length);
+}
+
+function updateTransitionTypeInputValue(transitionType) {
+    document.getElementById("transitionSelectionInput").value=transitionType;
+}
+
+function updateTransitionLengthInputValue(transitionTime) {
+    document.getElementById("transitionLengthInput").value=transitionTime;
+}
+
+function updateClipLength(length) {
+    selectedSequenceItem.length = length;
+    refreshAllStartTimes();
+}
+
+function refreshAllStartTimes() {
+    console.warn("refreshing starttimes");
+    let curSequenceLength = 0.0;
+    for(let i = 0; i < sequenceImages.length; i++) {
+        if(i == 0) {
+            sequenceImages[i].startTime = 0;
+        } else {
+            sequenceImages[i].startTime = curSequenceLength;
+        }
+        curSequenceLength+=sequenceImages[i].length;
+    }
+    console.warn(sequenceImages);
+    clearClipLayer(1);
+    updateTimeline();
+}
+
+function redrawSequenceMarker() {
+    let marker = document.createElement("div");
+    marker.id="sequenceMarker";
+    marker.style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
+    document.getElementById("sequencerTimeline").appendChild(marker);
+}
+
+function clearClipLayer(layerIdx) {
+    document.getElementById(`clipLayer${layerIdx}`).innerHTML = '';
+}
+
+function exportGif() {
+    globalTime = 0;
+    document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
+    isPlaying = false;
+    gifProcessing = true;
+    const canvas = document.querySelector("#gl-canvas");
+
+    let totalSequenceLength = getTotalSequenceLength();
+
+    needCapture = true;
+    document.getElementById("sequencerStartStop").disabled = true;
+    document.getElementById("sequencerRestart").disabled = true;
+
+    // render to blob, add to gif
+    // update global time
+    // render to blob
+
+    // create gift
 }
 
 document.getElementById("sequenceItemInput").addEventListener("change", function(e) {
@@ -309,146 +487,44 @@ document.getElementById("sequencerRestart").addEventListener("click", function(e
     globalTimeOffset = globalTime.valueOf();
 });
 
-let defaultLength = 4.0;
-let defaultTransitionTime = 1.0;
-let selectedSequenceItem = undefined;
-
-function addItemToSequence(file, texture, imgData) {
-    sequenceImages.push(
-        {
-            name:file.name,
-            texture:texture,
-            imgData:imgData,
-            startTime:getTotalSequenceLength(),
-            length:defaultLength,
-            id:sequenceImages.length,
-            transitionType: 0,
-            transitionTime: defaultTransitionTime
-        }
-    );
-
-    createNewSequenceItem(file.name, imgData, defaultLength, sequenceImages.length - 1);
-    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
-}
-
-function updateTimeline() {
-    for(let i = 0; i < sequenceImages.length; i++) {
-        let curTexture = sequenceImages[i];
-        createNewSequenceItem(curTexture.name, curTexture.imgData, curTexture.length, curTexture.transitionTime, i);
-    }
-    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
-}
-
-function createNewSequenceItem(name, imgData, length, transitionTime, sequenceIndex) {
-    let newSequenceItem = document.createElement("div");
-    let sequenceThumbnail = document.createElement("img")
-    let sequenceItemName = document.createElement("p");
-    newSequenceItem.className = "sequenceItemPlaceholder";
-    newSequenceItem.style.background = `linear-gradient(to right, rgb(169, 78, 255) ${((length - transitionTime) / length) * 100}%, rgb(41, 0, 79))`
-    //newSequenceItem.style.background = `rgb(169, 78, 255)`
-    newSequenceItem.style.width = length * pixelsPerSecond;
-    sequenceItemName.innerHTML = name;
-    sequenceItemName.className = "sequenceItemName";
-    sequenceThumbnail.src = imgData;
-    sequenceThumbnail.className = "sequenceThumbnail";
-    newSequenceItem.id = sequenceIndex;
-    newSequenceItem.appendChild(sequenceItemName);
-    newSequenceItem.appendChild(sequenceThumbnail);
-    //newSequenceItem.appendChild(createTransitionSelection(sequenceIndex));
-    document.getElementById("sequencerTimeline").appendChild(newSequenceItem);
-    newSequenceItem.addEventListener("click", setSelectedSequenceItem);
-}
-
-function createTransitionSelection(sequenceItemId) {
-    let transitionSelectionDropdown = document.createElement("div");
-    let transitionSelectionInput = document.createElement("select");
-    transitionSelectionInput.id = sequenceItemId;
-    transitionSelectionInput.addEventListener("change", updateSequenceItemTransition);
-    for(let i = 0; i < transitionOptions.length; i++) {
-        let optionName = transitionOptions[i];
-        let optionElement = document.createElement("option");
-        optionElement.value = i;
-        optionElement.innerHTML = optionName
-        transitionSelectionInput.appendChild(optionElement);
-    }
-    transitionSelectionDropdown.appendChild(transitionSelectionInput);
-    return transitionSelectionDropdown;
-}
 
 document.getElementById("transitionSelectionInput").addEventListener("change", updateSequenceItemTransition);
 
-function updateSequenceItemTransition(e) {
-    console.warn(e.target.value);
-    selectedSequenceItem.transitionType = +(e.target.value);
-}
-
-function setSelectedSequenceItem(e) {
-    if(selectedSequenceItem) {
-        document.getElementById(`${selectedSequenceItem.id}`).classList.remove("selected");
-    }
-    console.warn(e.target.id);
-    selectedSequenceItem = sequenceImages[+(e.target.id)]
-    document.getElementById(`${e.target.id}`).classList.add("selected");
-    updateClipNameLabel(selectedSequenceItem.name);
-    updateClipLengthInputValue(selectedSequenceItem.length);
-}
-
-function updateClipNameLabel(name) {
-    document.getElementById("clipNameLabel").innerHTML=name;
-}
-
-function updateClipLengthInputValue(length) {
-    document.getElementById("clipLengthInput").value = +(length);
-}
-
 document.getElementById("clipLengthInput").addEventListener("change", function(e) {
+    console.warn("updating length");
     updateClipLength(+(e.target.value));
 })
-
-function updateClipLength(length) {
-    selectedSequenceItem.length = length;
-    refreshAllStartTimes();
-}
-
-function refreshAllStartTimes() {
-    let curSequenceLength = 0.0;
-    for(let i = 0; i < sequenceImages.length; i++) {
-        curSequenceLength+=sequenceImages[i].length;
-        if(i == 0) continue;
-        sequenceImages[i].startTime = curSequenceLength;
-    }
-    document.getElementById("sequencerTimeline").innerHTML = '';
-    redrawSequenceMarker();
-    updateTimeline();
-}
-
-function redrawSequenceMarker() {
-    let marker = document.createElement("div");
-    marker.id="sequenceMarker";
-    marker.style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
-    document.getElementById("sequencerTimeline").appendChild(marker);
-}
 
 document.getElementById("exportButton").addEventListener("click", function(e) {
     exportGif();
 });
 
-function exportGif() {
-    globalTime = 0;
-    document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
-    isPlaying = false;
-    gifProcessing = true;
-    const canvas = document.querySelector("#gl-canvas");
+document.getElementById("timelineHorizontalScale").addEventListener("input", function(e) {
+    console.warn(e.target.value);
+    pixelsPerSecond = +(e.target.value);
+    clearClipLayer(1);
+    updateTimeline();
+});
 
-    let frames = 100;
-    let totalSequenceLength = getTotalSequenceLength();
+document.getElementById("removeClipButton").addEventListener("click", function(e) {
+    sequenceImages.splice(selectedSequenceItem.id, 1);
+    selectedSequenceItem = undefined;
+    clearClipLayer(1);
+    updateTimeline();
+    refreshAllStartTimes();
+    requestedCaptureFrames = frameRate * getTotalSequenceLength();
+});
 
-    needCapture = true;
-    requestedCaptureFrames = frames;
+document.getElementById("frameRateInput").addEventListener("change", function(e) {
+    frameRate = +(e.target.value);
+    requestedCaptureFrames = frameRate * getTotalSequenceLength();
+});
 
-    // render to blob, add to gif
-    // update global time
-    // render to blob
+document.getElementById("outputWidthInput").addEventListener("change", function(e) {
+    outGif.setOption("width", +(event.target.value));
+    document.getElementById("gl-canvas").style.width = `${e.target.value}px`;
+});
 
-    // create gift
-}
+document.getElementById("viewportScale").addEventListener("input", function(e) {
+    document.getElementById("gl-canvas").style.width = `${+(e.target.value) * 128}px`;
+});
