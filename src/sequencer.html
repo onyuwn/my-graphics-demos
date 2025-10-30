@@ -37,6 +37,10 @@
                         <p id="clipNameLabel"></p>
                     </div>
                     <div class="sequenceInfoItem">
+                        <p>Clip Start Time</p>
+                        <input id="clipStartTimeInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
                         <p>Clip Length</p>
                         <input id="clipLengthInput" type="number" />
                     </div>
@@ -56,12 +60,18 @@
                         <input id="transitionLengthInput" type="number" />
                     </div>
                     <div class="sequenceInfoItem">
-                        <p>Width</p>
+                        <p>Size</p>
                         <input id="clipWidthInput" type="number" />
+                        <input id="clipHeightInput" type="number" />
                     </div>
                     <div class="sequenceInfoItem">
-                        <p>Height</p>
-                        <input id="clipLengthInput" type="number" />
+                        <p>Clip Layer</p>
+                        <select id="clipLayerSelection">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
                     </div>
                     <button id="removeClipButton">remove clip</button>
                 </div>
@@ -76,8 +86,8 @@
                     <div class="renderSettingsItem">
                         <p>Output Dimensions</p>
                         <div style="display:flex">
-                            <input placeholder="width" id="outputWidthInput" value="128" type="number" />
-                            <input placeholder="height" id="outputHeightInput" value="128" type="number" />
+                            <input placeholder="width" id="outputWidthInput" value="256" type="number" />
+                            <input placeholder="height" id="outputHeightInput" value="256" type="number" />
                         </div>
                     </div>
                     <div class="renderSettingsItem" style="display:flex;justify-content: space-between;">
@@ -91,7 +101,7 @@
                 <div class="post" id="sequencerRoot">
                     <div id="viewportContainer">
                         <div id="viewport">
-                            <canvas id="gl-canvas" width="128" height="128"></canvas>
+                            <canvas id="gl-canvas" width="256" height="256"></canvas>
                         </div>
                         <input type="range" id="viewportScale" value="1" min="1" max="4" step=".25"/>
                     </div>
@@ -109,6 +119,9 @@
                 </div>
                 <div class="miniPost" id="sequencerTimeline">
                     <div id="sequenceMarker"></div>
+                    <div class="clipLayer" id="clipLayer4"></div>
+                    <div class="clipLayer" id="clipLayer2"></div>
+                    <div class="clipLayer" id="clipLayer3"></div>
                     <div class="clipLayer" id="clipLayer1"></div>
                     <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
                 </div>

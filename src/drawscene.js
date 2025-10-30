@@ -4,6 +4,8 @@ function drawScene(gl, programInfo, buffers, textures, time, delta) { // isPlayi
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const fieldOfView = (45 * Math.PI) / 180;
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -11,18 +13,29 @@ function drawScene(gl, programInfo, buffers, textures, time, delta) { // isPlayi
     const zFar = 100.0;
     
     const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-    for(let i = 0; i < textures.length; i++) {
-        let texture = textures[i];
-        if(time >= texture.startTime && time <= (texture.startTime + texture.length)) {
-            drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, texture, time);
-        }
+    //mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+    mat4.ortho(projectionMatrix, -1 , 1, -1 , 1, .1, 100);
+    let curRender = textures.filter(x=>time >= x.startTime && time <= (x.startTime + x.length))
+    // for(let i = 0; i < textures.length; i++) {
+    //     let texture = textures[i];
+    //     if(time >= texture.startTime && time <= (texture.startTime + texture.length)) {
+    //         drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, texture, time);
+    //     }
+    // }
+    curRender.sort((a,b)=>a.clipLayer-b.clipLayer);
+    for(let i = 0; i < curRender.length; i++) {
+        let texture = curRender[i];
+        gl.depthMask(false);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, texture, time, i);
+        gl.depthMask(true);
     }
 }
 
-function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem, time) {
+function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem, time, layer) {
     const modelViewMatrix = mat4.create();
-    mat4.translate(modelViewMatrix, modelViewMatrix, [position.x, position.y, -1.25]);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [position.x, position.y, -.1 - (.1 * layer)]);
 
     setPositionAttribute(gl, buffers, programInfo);
     setTextureAttribute(gl, buffers, programInfo);
