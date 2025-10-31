@@ -131,6 +131,7 @@ h1 {
 
 .sequenceThumbnail {
     width: 50px;
+    user-select: none;
 }
 
 .sequenceItemName {
@@ -142,12 +143,14 @@ h1 {
     white-space: nowrap;
     text-overflow: ellipsis;
     max-width: 50px;
+    user-select: none;
 }
 
 .sequenceItemPlaceholder {
     /* position: absolute; */
     display: grid;
-    grid-template-columns: auto 16px;
+    grid-template-columns: auto 32px;
+    width: auto;
 }
 
 #contentRoot {

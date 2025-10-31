@@ -168,8 +168,8 @@ let gifRendering = false;
 let outGif = new GIF({
     workers: 1,
     quality: 10,
-    width:128,
-    height:128,
+    width:256,
+    height:256,
     workerScript: 'dist/gif.worker.js'
 });
 
@@ -413,6 +413,8 @@ function createNewSequenceItem(sequenceItem) {
     let sizeControl = document.createElement("div");
     sizeControl.className = "lengthController";
     sizeControl.id = `${newSequenceItem.id}-lengthController`;
+    sizeControl.addEventListener("mousedown", startClipAdjustment);
+    //sizeControl.addEventListener("mouseup", endClipAdjustment);
     newSequenceItem.appendChild(sizeControl);
     let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`)
     curLayer.appendChild(newSequenceItem);
@@ -422,8 +424,6 @@ function createNewSequenceItem(sequenceItem) {
     // curLayer.style.gridTemplateColumns = gridPartsStr.join(" ");
 
     newSequenceItem.addEventListener("click", setSelectedSequenceItem);
-    sizeControl.addEventListener("mousedown", startClipAdjustment);
-    sizeControl.addEventListener("mouseup", endClipAdjustment);
 }
 
 let resizingClip = false;
@@ -440,7 +440,9 @@ function startClipAdjustment(e) {
     let layerId = parts[0];
     let clipId = parts[1];
     let curClipElement = document.getElementById(`${layerId}-${clipId}`);
-    initialResizeWidth = +(curClipElement.style.width.replace("px", ''));
+    let curClipLayer = document.getElementById(`clipLayer#${+(layerId) + 1}`);
+    let gridParts = curClipElement.parentElement.style.gridTemplateColumns.split(" ");
+    initialResizeWidth = +(gridParts[clipId].replace("px", '')); // change to grid col size
 }
 
 document.addEventListener("mousemove", function(e) {
@@ -457,11 +459,11 @@ document.addEventListener("mousemove", function(e) {
         let newSize = (curX - resizeStart) + initialResizeWidth;
         gridParts[clipId] = `${newSize}px`;
         curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-        curClipElement.style.width = gridParts[+(parts[1])];
+        //curClipElement.style.width = gridParts[+(parts[1])];
     }
 });
 
-function endClipAdjustment(e) {
+document.addEventListener("mouseup", function(e) {
     if(curSelectedClipForResize) {
         console.warn("completing resize");
         resizingClip = false;
@@ -474,11 +476,11 @@ function endClipAdjustment(e) {
         pxStr = pxStr.replace("px", "");
         curClip.length = +(pxStr) / pixelsPerSecond;
         let curClipElement = document.getElementById(curClip.id);
-        curClipElement.style.width = gridParts[+(parts[1])];
+        //curClipElement.style.width = gridParts[+(parts[1])];
         curSelectedClipForResize = undefined;
         updateLayerStartTimes(+(parts[0]))//update start times
     }
-}
+});
 
 function updateSequenceItemTransition(e) {
     console.warn(e.target.value);
@@ -506,11 +508,7 @@ function setSelectedSequenceItem(e) {
         selectedItemClipIndex = +(parts[1]);
         selectedSequenceItem = sequence[selectedItemLayerIndex][selectedItemClipIndex];
         document.getElementById(`${itemId}`).classList.add("selected");
-        updateClipNameLabel(selectedSequenceItem.name);
-        updateClipLengthInputValue(selectedSequenceItem.length);
-        updateTransitionTypeInputValue(selectedSequenceItem.transitionType);
-        updateTransitionLengthInputValue(selectedSequenceItem.transitionTime);
-        updateClipStartTimeInputValue(selectedSequenceItem.startTime);
+        updateSequenceInspectAttributes(selectedSequenceItem);
     }
 }
 
@@ -520,6 +518,7 @@ function updateSequenceInspectAttributes(sequenceItem) {
     updateTransitionTypeInputValue(sequenceItem.transitionType);
     updateTransitionLengthInputValue(sequenceItem.transitionTime);
     updateClipStartTimeInputValue(sequenceItem.startTime);
+    updateClipLayerInputValue(sequenceItem.clipLayer);
 }
 
 function updateClipNameLabel(name) {
@@ -542,9 +541,15 @@ function updateClipStartTimeInputValue(startTime) {
     document.getElementById("clipStartTimeInput").value = startTime;
 }
 
+function updateClipLayerInputValue(clipLayer) {
+    document.getElementById("clipLayerSelection").value = clipLayer;
+}
+
 function updateClipLength(length) {
     selectedSequenceItem.length = length;
     updateLayerStartTimes(selectedSequenceItem.clipLayer - 1);
+    clearClipLayer(selectedSequenceItem.clipLayer)
+    updateTimeline();
 }
 
 function updateLayerStartTimes(layer) {
@@ -585,8 +590,8 @@ function redrawSequenceMarker() {
     document.getElementById("sequencerTimeline").appendChild(marker);
 }
 
-function clearClipLayer(layerIdx) {
-    document.getElementById(`clipLayer${layerIdx}`).innerHTML = '';
+function clearClipLayer(layerId) {
+    document.getElementById(`clipLayer${layerId}`).innerHTML = '';
 }
 
 function exportGif() {
@@ -694,6 +699,12 @@ document.getElementById("clipLayerSelection").addEventListener("change", functio
 document.getElementById("clipStartTimeInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         selectedSequenceItem.startTime = +(e.target.value);
+    }
+});
+
+document.getElementById("transitionLengthInput").addEventListener("change", function(e) {
+    if(selectedSequenceItem) {
+        selectedSequenceItem.transitionTime = +(e.target.value)
     }
 });
 
