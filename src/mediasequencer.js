@@ -2,6 +2,8 @@ import { initBuffers } from "./initbuffers.js";
 import { drawScene } from "./drawscene.js";
 import GIF from "gif.js.optimized";
 
+const MAX_LAYERS = 4;
+
 const vertexShaderSource = `
     attribute vec2 aTextureCoord;
     attribute vec4 aVertexPosition;
@@ -44,6 +46,13 @@ const fragmentShaderSource = `
         }
         else if(transitionType == 2 && time >= transitionStart) {
             gl_FragColor *= (random2(vTextureCoord + time).x - (time - transitionStart));
+        } else if(transitionType == 3 && time >= (transitionStart - .25)) {
+            vec2 cPos = -1.0 + 2.0 * uv;
+            // distance of current pixel from center
+            float cLength = length(cPos);
+            vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
+            gl_FragColor = texture2D(uSampler,newUv);
+            gl_FragColor.a -= (time - transitionStart) / transitionTime;
         }
         //gl_FragColor.a = time;
     }
@@ -141,7 +150,7 @@ function loadTexture(gl, url) {
 }
 
 let sequenceLength = 10; // total time in s? ig this will just be sum of frames?
-let sequenceImages = []; //{image:"src", length:"0.0", shader:"", size:[], position:[]}
+let sequence = [[],[],[],[]]; //{image:"src", length:"0.0", shader:"", size:[], position:[]}
 
 let glContext = undefined;
 let globalTime = 0;
@@ -205,16 +214,16 @@ function main() {
     const buffers = initBuffers(gl);
     const texture = loadTexture(gl, "/ceiling1.png");
     const texture2 = loadTexture(gl, "/sky.png");
-    sequenceImages.push({name:"test1",
+    sequence[0].push({name:"test1",
                          texture:texture,
                          startTime:0.0,
                          length:4.0,
-                         id: 0, transitionType: 0, transitionTime: 1.0, clipLayer: 1});
-    sequenceImages.push({name:"test2",
+                         id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1});
+    sequence[0].push({name:"test2",
                          texture:texture2,
                          startTime:4.0,
                          length:4.0,
-                         id: 1,
+                         id: "1-1",
                          transitionType: 0, transitionTime: 1.0, clipLayer: 1});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -255,19 +264,19 @@ function main() {
 
         if(isPlaying && gifProcessing == false) {
             globalTime = now - globalTimeOffset;
-            document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
+            updateSequenceMarkerPosition();
         } else if(gifProcessing == false) {
             globalTimeOffset = now;
         }
     
         if(gifProcessing == false) {
-            drawScene(gl, programInfo, buffers, sequenceImages, globalTime, deltaTime);
+            drawScene(gl, programInfo, buffers, sequence, globalTime, deltaTime);
         }
         document.getElementById("timeValue").innerHTML = globalTime.toFixed(4);
 
         if(needCapture == true) {
             needCapture = false;
-            drawScene(gl, programInfo, buffers, sequenceImages, globalTime, deltaTime);
+            drawScene(gl, programInfo, buffers, sequence, globalTime, deltaTime);
             if(finalFrames.length < requestedCaptureFrames) {
                 canvas.toBlob((blob) => {
                     //window.URL.createObjectURL(blob);
@@ -301,13 +310,29 @@ function getImgDataFromFile(fileName) {
     //var file = new File(fileName);
 }
 
-function getTotalSequenceLength() {
-    let length = 0.0;
-    for(let i = 0; i < sequenceImages.length; i++) {
-        length += sequenceImages[i].length;
+function getTotalSequenceLength() { // update to return longest layer
+    let finalMaxLength = 0.0;
+    for(let i = 0; i < MAX_LAYERS; i++) {
+        let length = 0;
+        if(sequence[i].length > 0) {
+            for(let j = 0; j < sequence[i].length; j++) { // factor in start time if gaps addeds
+                length += sequence[i][j].length;
+            }
+            if(length > finalMaxLength) {
+                finalMaxLength = length;
+            }
+        }
     }
 
-    return length;
+    return finalMaxLength;
+}
+
+function getLayerLength(layerIdx) {
+    let total = 0.0;
+    for(let i = 0; i < sequence[layerIdx].length; i++) {
+        total+=sequence[layerIdx][i].length;
+    }
+    return total;
 }
 
 function getSequencerOffset() {
@@ -319,73 +344,140 @@ let defaultLength = 4.0;
 let defaultTransitionTime = 1.0;
 let selectedSequenceItem = undefined;
 
-function addItemToSequence(file, texture, imgData) {
-    console.warn(sequenceImages);
-    console.warn(`sequencelenfght: ${sequenceImages.length}`);
-    sequenceImages.push(
-        {
-            name:file.name,
-            texture:texture,
-            imgData:imgData,
-            startTime:getTotalSequenceLength(),
-            length:defaultLength,
-            id:sequenceImages.length - 1,
-            transitionType: 0,
-            transitionTime: defaultTransitionTime,
-            clipLayer: 1
-        }
+function addItemToSequence(file, texture, imgData, layer) {
+    console.warn(sequence);
+    console.warn(`sequencelenfght: ${sequence.length}`);
+
+    let newItem = {
+        name:file.name,
+        texture:texture,
+        imgData:imgData,
+        startTime:getLayerLength(layer),
+        length:defaultLength,
+        id:`${layer}-${sequence[layer].length.valueOf()}`,
+        transitionType: 0,
+        transitionTime: defaultTransitionTime,
+        clipLayer: layer + 1
+    };
+
+    sequence[layer].push(
+        newItem
     );
-    createNewSequenceItem(sequenceImages[sequenceImages.length - 1]);
+
+    createNewSequenceItem(newItem);
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
     requestedCaptureFrames = frameRate * getTotalSequenceLength();
+
+    let curLayer = document.getElementById(`clipLayer${newItem.clipLayer}`);
+    let gridPartsStr = curLayer.style.gridTemplateColumns.split(" ");
+    gridPartsStr.push(`${newItem.length * pixelsPerSecond}px`);
+    curLayer.style.gridTemplateColumns = gridPartsStr.join(" ");
 }
 
 function updateTimeline() {
     console.warn("sequence update");
-    console.warn(sequenceImages);
-    for(let i = 0; i < sequenceImages.length; i++) {
-        let curTexture = sequenceImages[i];
-        curTexture.id = i;
-        createNewSequenceItem(curTexture);
+    console.warn(sequence);
+    for(let i = 0; i < MAX_LAYERS; i++) {
+        if(sequence[i].length > 0) {
+            let curClipLayer = document.getElementById(`clipLayer${i+1}`);
+            let gridRowsStr = "";
+            for(let j = 0; j < sequence[i].length; j++) {
+                let curTexture = sequence[i][j];
+                gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
+                curTexture.id = `${i}-${j}`;
+                createNewSequenceItem(curTexture);
+            }
+            curClipLayer.style.gridTemplateColumns = gridRowsStr;
+        }
     }
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
 }
 
 function createNewSequenceItem(sequenceItem) {
     let newSequenceItem = document.createElement("div");
+    let nameThumbnailContainer = document.createElement("div");
     let sequenceThumbnail = document.createElement("img")
     let sequenceItemName = document.createElement("p");
     newSequenceItem.className = "sequenceItemPlaceholder";
     newSequenceItem.style.background = `linear-gradient(to right, rgb(169, 78, 255) ${((sequenceItem.length - sequenceItem.transitionTime) / sequenceItem.length) * 100}%, rgb(41, 0, 79))`
-    //newSequenceItem.style.background = `rgb(169, 78, 255)`
-    newSequenceItem.style.width = sequenceItem.length * pixelsPerSecond;
-    newSequenceItem.style.left = (sequenceItem.startTime * pixelsPerSecond) + 30 + getSequencerOffset();
+    //newSequenceItem.style.width = sequenceItem.length * pixelsPerSecond;
+    //newSequenceItem.style.left = (sequenceItem.startTime * pixelsPerSecond) + 30 + getSequencerOffset();
     sequenceItemName.innerHTML = sequenceItem.name;
     sequenceItemName.className = "sequenceItemName";
     sequenceThumbnail.src = sequenceItem.imgData;
     sequenceThumbnail.className = "sequenceThumbnail";
     newSequenceItem.id = sequenceItem.id;
-    newSequenceItem.appendChild(sequenceItemName);
-    newSequenceItem.appendChild(sequenceThumbnail);
-    //newSequenceItem.appendChild(createTransitionSelection(sequenceIndex));
-    document.getElementById(`clipLayer${sequenceItem.clipLayer}`).appendChild(newSequenceItem);
+    nameThumbnailContainer.appendChild(sequenceItemName);
+    nameThumbnailContainer.appendChild(sequenceThumbnail);
+    newSequenceItem.appendChild(nameThumbnailContainer);
+    let sizeControl = document.createElement("div");
+    sizeControl.className = "lengthController";
+    sizeControl.id = `${newSequenceItem.id}-lengthController`;
+    newSequenceItem.appendChild(sizeControl);
+    let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`)
+    curLayer.appendChild(newSequenceItem);
+    
+    // let gridPartsStr = curLayer.style.gridTemplateColumns;
+    // gridPartsStr.push(`${sequence.length * pixelsPerSecond}px`);
+    // curLayer.style.gridTemplateColumns = gridPartsStr.join(" ");
+
     newSequenceItem.addEventListener("click", setSelectedSequenceItem);
+    sizeControl.addEventListener("mousedown", startClipAdjustment);
+    sizeControl.addEventListener("mouseup", endClipAdjustment);
 }
 
-function createTransitionSelection(sequenceItemId) {
-    let transitionSelectionDropdown = document.createElement("div");
-    let transitionSelectionInput = document.createElement("select");
-    transitionSelectionInput.id = sequenceItemId;
-    transitionSelectionInput.addEventListener("change", updateSequenceItemTransition);
-    for(let i = 0; i < transitionOptions.length; i++) {
-        let optionName = transitionOptions[i];
-        let optionElement = document.createElement("option");
-        optionElement.value = i;
-        optionElement.innerHTML = optionName
-        transitionSelectionInput.appendChild(optionElement);
+let resizingClip = false;
+let resizeStart = 0.0;
+let initialResizeWidth = 0.0;
+let curSelectedClipForResize = undefined;
+
+function startClipAdjustment(e) {
+    resizingClip = true;
+    let curX = e.clientX;
+    resizeStart = curX;
+    curSelectedClipForResize = e.target;
+    let parts = curSelectedClipForResize.id.split("-");
+    let layerId = parts[0];
+    let clipId = parts[1];
+    let curClipElement = document.getElementById(`${layerId}-${clipId}`);
+    initialResizeWidth = +(curClipElement.style.width.replace("px", ''));
+}
+
+document.addEventListener("mousemove", function(e) {
+    let curX = e.clientX;
+    if(resizingClip == true && curSelectedClipForResize && e.target.id.includes("-") && e.target.id.split("-").length == 3) {
+        let parts = curSelectedClipForResize.id.split("-");
+        let layerId = parts[0];
+        let clipId = parts[1];
+        let curClipLayer = document.getElementById(`clipLayer${+(layerId) + 1}`);
+
+        let curGridStr = curClipLayer.style.gridTemplateColumns;
+        let gridParts = curGridStr.split(" ");
+        let curClipElement = document.getElementById(`${layerId}-${clipId}`);
+        let newSize = (curX - resizeStart) + initialResizeWidth;
+        gridParts[clipId] = `${newSize}px`;
+        curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
+        curClipElement.style.width = gridParts[+(parts[1])];
     }
-    transitionSelectionDropdown.appendChild(transitionSelectionInput);
-    return transitionSelectionDropdown;
+});
+
+function endClipAdjustment(e) {
+    if(curSelectedClipForResize) {
+        console.warn("completing resize");
+        resizingClip = false;
+        let parts = curSelectedClipForResize.id.split("-");
+        let curClip = sequence[+(parts[0])][+(parts[1])];
+        let curClipLayer = document.getElementById(`clipLayer${+(parts[0]) + 1}`);
+        let curGridStr = curClipLayer.style.gridTemplateColumns;
+        let gridParts = curGridStr.split(" ");
+        let pxStr = gridParts[+(parts[1])];
+        pxStr = pxStr.replace("px", "");
+        curClip.length = +(pxStr) / pixelsPerSecond;
+        let curClipElement = document.getElementById(curClip.id);
+        curClipElement.style.width = gridParts[+(parts[1])];
+        curSelectedClipForResize = undefined;
+        updateLayerStartTimes(+(parts[0]))//update start times
+    }
 }
 
 function updateSequenceItemTransition(e) {
@@ -397,14 +489,37 @@ function setSelectedSequenceItem(e) {
     if(selectedSequenceItem) {
         document.getElementById(`${selectedSequenceItem.id}`).classList.remove("selected");
     }
-    console.warn(e.target.id);
-    selectedSequenceItem = sequenceImages[+(e.target.id)]
-    document.getElementById(`${e.target.id}`).classList.add("selected");
-    updateClipNameLabel(selectedSequenceItem.name);
-    updateClipLengthInputValue(selectedSequenceItem.length);
-    updateTransitionTypeInputValue(selectedSequenceItem.transitionType);
-    updateTransitionLengthInputValue(selectedSequenceItem.transitionTime);
-    updateClipStartTimeInputValue(selectedSequenceItem.startTime);
+
+    let itemId = e.target.id;
+    if(!itemId || (itemId && itemId.split("-").length == 0)) {
+        let parentId = e.target.parentElement.id;
+        console.warn(parentId);
+        itemId = parentId;
+    }
+    
+    let selectedItemLayerIndex = 0;
+    let selectedItemClipIndex = 0;
+
+    if(itemId.includes("-") == true && itemId.split("-").length == 2) {
+        let parts = itemId.split("-");
+        selectedItemLayerIndex = +(parts[0]);
+        selectedItemClipIndex = +(parts[1]);
+        selectedSequenceItem = sequence[selectedItemLayerIndex][selectedItemClipIndex];
+        document.getElementById(`${itemId}`).classList.add("selected");
+        updateClipNameLabel(selectedSequenceItem.name);
+        updateClipLengthInputValue(selectedSequenceItem.length);
+        updateTransitionTypeInputValue(selectedSequenceItem.transitionType);
+        updateTransitionLengthInputValue(selectedSequenceItem.transitionTime);
+        updateClipStartTimeInputValue(selectedSequenceItem.startTime);
+    }
+}
+
+function updateSequenceInspectAttributes(sequenceItem) {
+    updateClipNameLabel(sequenceItem.name);
+    updateClipLengthInputValue(sequenceItem.length);
+    updateTransitionTypeInputValue(sequenceItem.transitionType);
+    updateTransitionLengthInputValue(sequenceItem.transitionTime);
+    updateClipStartTimeInputValue(sequenceItem.startTime);
 }
 
 function updateClipNameLabel(name) {
@@ -429,42 +544,38 @@ function updateClipStartTimeInputValue(startTime) {
 
 function updateClipLength(length) {
     selectedSequenceItem.length = length;
-    refreshAllStartTimes();
+    updateLayerStartTimes(selectedSequenceItem.clipLayer - 1);
+}
+
+function updateLayerStartTimes(layer) {
+    let curLayer = sequence[layer];
+    if(curLayer.length > 0) {
+        let curLayerLength = 0;
+        for(let i = 0; i < curLayer.length; i++) {
+            if(i == 0) {
+                curLayer[i].startTime = 0;
+                curLayerLength = curLayer[i].length;
+            } else {
+                curLayer[i].startTime = curLayerLength;
+                curLayerLength += curLayer[i].length;
+            }
+        }
+    }
+    console.warn("start times fixed");
+    console.warn(curLayer);
 }
 
 function refreshAllStartTimes() { // todo how to handle layers?
     console.warn("refreshing starttimes");
-    let curSequence1Length = 0.0;
-    let curSequence2Length = 0.0;
-    let curSequence3Length = 0.0;
-    let curSequence4Length = 0.0;
-    for(let i = 0; i < sequenceImages.length; i++) {
-        if(i == 0) {
-            sequenceImages[i].startTime = 0;
-        } else {
-            if(sequenceImages[i].clipLayer == 1) {
-                curSequence1Length+=sequenceImages[i].length;
-            } else if (sequenceImages[i].clipLayer == 2) {
-                curSequence2Length+=sequenceImages[i].length;
-            } else if (sequenceImages[i].clipLayer == 3) {
-                curSequence3Length+=sequenceImages[i].length;
-            } else if (sequenceImages[i].clipLayer == 4) {
-                curSequence4Length+=sequenceImages[i].length;
-            }
-        }
-        if(sequenceImages[i].clipLayer == 1) {
-            curSequence1Length+=sequenceImages[i].length;
-        } else if (sequenceImages[i].clipLayer == 2) {
-            curSequence2Length+=sequenceImages[i].length;
-        } else if (sequenceImages[i].clipLayer == 3) {
-            curSequence3Length+=sequenceImages[i].length;
-        } else if (sequenceImages[i].clipLayer == 4) {
-            curSequence4Length+=sequenceImages[i].length;
-        }
+    for(let i = 0; i < MAX_LAYERS; i++) {
+        updateLayerStartTimes(i);
     }
-    console.warn(sequenceImages);
-    clearClipLayer(1);
+    clearAllClipLayers(0);
     updateTimeline();
+}
+
+function updateSequenceMarkerPosition() { 
+    document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
 }
 
 function redrawSequenceMarker() {
@@ -480,7 +591,7 @@ function clearClipLayer(layerIdx) {
 
 function exportGif() {
     globalTime = 0;
-    document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
+    updateSequenceMarkerPosition();
     isPlaying = false;
     gifProcessing = true;
     const canvas = document.querySelector("#gl-canvas");
@@ -504,7 +615,7 @@ document.getElementById("sequenceItemInput").addEventListener("change", function
 
     reader.addEventListener("load", function(e) {
         const newTexture = loadTexture(glContext, e.target.result);
-        addItemToSequence(file, newTexture, e.target.result);
+        addItemToSequence(file, newTexture, e.target.result, 0);
     });
 
     if (file) {
@@ -546,7 +657,7 @@ document.getElementById("timelineHorizontalScale").addEventListener("input", fun
 });
 
 document.getElementById("removeClipButton").addEventListener("click", function(e) {
-    sequenceImages.splice(selectedSequenceItem.id, 1);
+    sequence[selectedSequenceItem.clipLayer - 1].splice(+(selectedSequenceItem.id.split("-")[1]), 1);
     selectedSequenceItem = undefined;
     clearClipLayer(1);
     updateTimeline();
@@ -570,7 +681,11 @@ document.getElementById("viewportScale").addEventListener("input", function(e) {
 
 document.getElementById("clipLayerSelection").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
+        let clipIdx = +(selectedSequenceItem.id.split("-")[1]);
+        console.warn(sequence[selectedSequenceItem.clipLayer - 1])
+        let removed = sequence[selectedSequenceItem.clipLayer - 1].splice(clipIdx, 1);
         selectedSequenceItem.clipLayer = +(event.target.value);
+        sequence[+(event.target.value) - 1].push(removed[0]);
         clearAllClipLayers();
         refreshAllStartTimes();
     }
