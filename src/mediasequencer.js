@@ -28,6 +28,7 @@ const fragmentShaderSource = `
     uniform float sequenceItemStartTime;
     uniform int transitionType;
     uniform int sequenceIndex;
+    uniform vec3 colorThreshold;
 
     uniform sampler2D uSampler;
 
@@ -53,6 +54,19 @@ const fragmentShaderSource = `
             vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
             gl_FragColor = texture2D(uSampler,newUv);
             gl_FragColor.a -= (time - transitionStart) / transitionTime;
+        } else if(transitionType == 4 && time >= transitionStart) { // erase color increase threshold over time until black
+            vec4 diffuse = texture2D(uSampler,uv);
+            float rDiff = abs(diffuse.r - colorThreshold.r);
+            float gDiff = abs(diffuse.g - colorThreshold.g);
+            float bDiff = abs(diffuse.b - colorThreshold.b);
+            float rThreshold = (time - transitionStart) / transitionTime;
+            float gThreshold = (time - transitionStart) / transitionTime;
+            float bThreshold = (time - transitionStart) / transitionTime;
+            if(rDiff < rThreshold && gDiff < gThreshold && bDiff < bThreshold) {
+                discard;
+            } else {
+                gl_FragColor = diffuse;
+            }  
         }
         //gl_FragColor.a = time;
     }
@@ -209,6 +223,7 @@ function main() {
             transitionType: gl.getUniformLocation(shaderProgram, "transitionType"),
             sequenceIndex: gl.getUniformLocation(shaderProgram, "sequenceIndex"),
             sequenceItemStartTime: gl.getUniformLocation(shaderProgram, "sequenceItemStartTime"),
+            colorThreshold: gl.getUniformLocation(shaderProgram, "colorThreshold"),
         }
     }
     const buffers = initBuffers(gl);
@@ -383,9 +398,27 @@ function updateTimeline() {
             let gridRowsStr = "";
             for(let j = 0; j < sequence[i].length; j++) {
                 let curTexture = sequence[i][j];
-                gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
-                curTexture.id = `${i}-${j}`;
-                createNewSequenceItem(curTexture);
+                let prevClip = undefined;
+                let dClip = -1;
+
+                if(j > 0)  {
+                    prevClip = sequence[i][j - 1];
+                    dClip = curTexture.startTime - (prevClip.length + prevClip.startTime);
+                }
+
+                // add empty column if end of previous does not equal start of next clip
+                if(prevClip && prevClip.length + prevClip.startTime < curTexture.startTime) {
+                    let delta = curTexture.startTime - (prevClip.length + prevClip.startTime);
+                    gridRowsStr += `${delta * pixelsPerSecond}px `;
+                    gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
+                    curTexture.id = `${i}-${j}`;
+                    console.warn("adding gap");
+                    createNewSequenceItem(curTexture, true);
+                } else {
+                    gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
+                    curTexture.id = `${i}-${j}`;
+                    createNewSequenceItem(curTexture);
+                }
             }
             curClipLayer.style.gridTemplateColumns = gridRowsStr;
         }
@@ -393,7 +426,7 @@ function updateTimeline() {
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
 }
 
-function createNewSequenceItem(sequenceItem) {
+function createNewSequenceItem(sequenceItem, gapBefore = false) {
     let newSequenceItem = document.createElement("div");
     let nameThumbnailContainer = document.createElement("div");
     let sequenceThumbnail = document.createElement("img")
@@ -411,9 +444,17 @@ function createNewSequenceItem(sequenceItem) {
     nameThumbnailContainer.appendChild(sequenceThumbnail);
     newSequenceItem.appendChild(nameThumbnailContainer);
     let sizeControl = document.createElement("div");
+    let frontSizeControl = document.createElement("div");
     sizeControl.className = "lengthController";
     sizeControl.id = `${newSequenceItem.id}-lengthController`;
     sizeControl.addEventListener("mousedown", startClipAdjustment);
+    newSequenceItem.addEventListener("mousedown", startClipPositionAdjustment);
+    console.warn(sequenceItem.id);
+    if(gapBefore == true) {
+        newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 2;
+    } else {
+        newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 1;
+    }
     //sizeControl.addEventListener("mouseup", endClipAdjustment);
     newSequenceItem.appendChild(sizeControl);
     let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`)
@@ -427,9 +468,13 @@ function createNewSequenceItem(sequenceItem) {
 }
 
 let resizingClip = false;
+let movingClip = false;
 let resizeStart = 0.0;
+let moveStart = 0.0;
+let initialClipStartTime = 0.0;
 let initialResizeWidth = 0.0;
 let curSelectedClipForResize = undefined;
+let curSelectedClipForMove = undefined;
 
 function startClipAdjustment(e) {
     resizingClip = true;
@@ -445,6 +490,16 @@ function startClipAdjustment(e) {
     initialResizeWidth = +(gridParts[clipId].replace("px", '')); // change to grid col size
 }
 
+function startClipPositionAdjustment(e) {
+    movingClip = true;
+    moveStart = e.clientX;
+    curSelectedClipForMove = e.target;
+    let curSelectedClipIdx = +(curSelectedClipForMove.parentElement.id.split("-")[1]);
+    let clipLayerIdx = +(curSelectedClipForMove.parentElement.id.split("-")[0]);
+    let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
+    initialClipStartTime = curClip.startTime;
+}
+
 document.addEventListener("mousemove", function(e) {
     let curX = e.clientX;
     if(resizingClip == true && curSelectedClipForResize && e.target.id.includes("-") && e.target.id.split("-").length == 3) {
@@ -457,9 +512,60 @@ document.addEventListener("mousemove", function(e) {
         let gridParts = curGridStr.split(" ");
         let curClipElement = document.getElementById(`${layerId}-${clipId}`);
         let newSize = (curX - resizeStart) + initialResizeWidth;
-        gridParts[clipId] = `${newSize}px`;
+
+        let gapCounter = 0; // add this to index when parsing grid template str
+        if(clipId > 0) {
+            let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
+            for(let i = 0; i < sequence[layerId].length; i++) { // stop when we get to current clip
+                if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
+                    gapCounter++;
+                }
+    
+                if(i == clipId) break;
+            }
+        }
+
+        gridParts[clipId + gapCounter] = `${newSize}px`;
         curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
         //curClipElement.style.width = gridParts[+(parts[1])];
+    }
+    if(movingClip) {
+        let curSelectedClipIdx = +(curSelectedClipForMove.parentElement.id.split("-")[1]);
+        let clipLayerIdx = +(curSelectedClipForMove.parentElement.id.split("-")[0]);
+        let curClipLayer = document.getElementById(`clipLayer${clipLayerIdx + 1}`);
+        let curGridStr = curClipLayer.style.gridTemplateColumns;
+        let gridParts = curGridStr.split(" ");
+        let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
+        let secondsMoved = ((curX - moveStart) / pixelsPerSecond) + initialClipStartTime;
+        console.warn("moving clip @");
+        console.warn(`${curSelectedClipForMove.parentElement.id}`);
+
+        if(curSelectedClipIdx > 0) {
+            let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
+            let gapCounter = 0; // add this to index when parsing grid template str
+            for(let i = 0; i < sequence[clipLayerIdx].length; i++) { // stop when we get to current clip
+                if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
+                    gapCounter++;
+                }
+
+                if(i == curSelectedClipIdx) break;
+            }
+            if((prevClip.startTime + prevClip.length) < curClip.startTime) {
+                let curGap = +(gridParts[(curSelectedClipIdx - 1) + gapCounter].replace("px", ''));
+                gridParts[(curSelectedClipIdx - 1) + gapCounter] = `${(curX - moveStart)}px`;
+                curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
+            } else {
+                gridParts.splice(curSelectedClipIdx, 0, `${secondsMoved}px`);
+                console.warn(gridParts);
+                curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
+                curSelectedClipForMove.parentElement.style.gridColumn = +(curSelectedClipForMove.parentElement.style.gridColumn) + 1; 
+            }
+            curClip.startTime = secondsMoved;
+        } else if(sequence[clipLayerIdx].length == 1) {
+
+        }
+        // clearAllClipLayers();
+        // updateTimeline();
     }
 });
 
@@ -480,11 +586,54 @@ document.addEventListener("mouseup", function(e) {
         curSelectedClipForResize = undefined;
         updateLayerStartTimes(+(parts[0]))//update start times
     }
+    if(curSelectedClipForMove && movingClip == true) {
+        movingClip = false;
+    }
 });
 
 function updateSequenceItemTransition(e) {
+    let transitionType = e.target.value;
     console.warn(e.target.value);
     selectedSequenceItem.transitionType = +(e.target.value);
+
+    if(transitionType == 4) {
+        showTransitionStyleSection(transitionType)
+    } else {
+        hideTransitionStyleSection()
+    }
+}
+
+function showTransitionStyleSection(transitionType) {
+    let transitionStyleSection = document.getElementById("transitionStyleInputSection");
+    if(transitionType==4) {
+        let inputLabel = document.createElement("p");
+        inputLabel.innerHTML = "threshold color"
+        let colorPicker = document.createElement("input");
+        colorPicker.type="color";
+        colorPicker.id="colorThresholdPicker";
+        colorPicker.addEventListener("change", function(e) {
+            console.warn(e.target.value);
+            let hexVal = e.target.value;
+            let rgb = hexToRgb(hexVal);
+            selectedSequenceItem.colorThreshold = rgb;
+            console.warn(selectedSequenceItem.colorThreshold);
+        });
+        transitionStyleSection.appendChild(inputLabel);
+        transitionStyleSection.appendChild(colorPicker);
+    }
+}
+
+function hexToRgb(hexStr) {
+    let hexVal = hexStr.replace("#", '');
+    let r = parseInt(hexVal.substring(0, 2), 16);
+    let g = parseInt(hexVal.substring(2, 4), 16);
+    let b = parseInt(hexVal.substring(4, 6), 16);
+    return [r / 255.0, g / 255.0, b / 255.0];
+}
+
+function hideTransitionStyleSection() {
+    let transitionStyleSection = document.getElementById("transitionStyleInputSection");
+    transitionStyleSection.innerHTML = '';
 }
 
 function setSelectedSequenceItem(e) {
@@ -699,6 +848,8 @@ document.getElementById("clipLayerSelection").addEventListener("change", functio
 document.getElementById("clipStartTimeInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         selectedSequenceItem.startTime = +(e.target.value);
+        clearAllClipLayers();
+        updateTimeline();
     }
 });
 

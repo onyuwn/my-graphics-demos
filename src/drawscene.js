@@ -62,6 +62,9 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.uniform1f(programInfo.uniformLocations.transitionTime, sequenceItem.transitionTime);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemLength, sequenceItem.length);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemStartTime, sequenceItem.startTime);
+    if(sequenceItem.colorThreshold && sequenceItem.colorThreshold.length == 3) {
+        gl.uniform3f(programInfo.uniformLocations.colorThreshold, sequenceItem.colorThreshold[0], sequenceItem.colorThreshold[1], sequenceItem.colorThreshold[2]);
+    }
 
     {
         const offset = 0;
