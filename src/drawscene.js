@@ -57,9 +57,11 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.bindTexture(gl.TEXTURE_2D, sequenceItem.texture);
     gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
     gl.uniform1i(programInfo.uniformLocations.transitionType, sequenceItem.transitionType);
+    gl.uniform1i(programInfo.uniformLocations.transitionType, sequenceItem.fadeInTransitionType);
     gl.uniform1i(programInfo.uniformLocations.sequenceIndex, sequenceItem.id + 1);
     gl.uniform1f(programInfo.uniformLocations.time, time);
     gl.uniform1f(programInfo.uniformLocations.transitionTime, sequenceItem.transitionTime);
+    gl.uniform1f(programInfo.uniformLocations.transitionTime, sequenceItem.fadeInTransitionTime);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemLength, sequenceItem.length);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemStartTime, sequenceItem.startTime);
     if(sequenceItem.colorThreshold && sequenceItem.colorThreshold.length == 3) {

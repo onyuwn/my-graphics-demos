@@ -372,7 +372,10 @@ function addItemToSequence(file, texture, imgData, layer) {
         id:`${layer}-${sequence[layer].length.valueOf()}`,
         transitionType: 0,
         transitionTime: defaultTransitionTime,
-        clipLayer: layer + 1
+        clipLayer: layer + 1,
+        clipEffect: 0,
+        fadeInTransitionType: 0,
+        fadeInTransitionTime: 0
     };
 
     sequence[layer].push(
@@ -440,6 +443,7 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     sequenceThumbnail.src = sequenceItem.imgData;
     sequenceThumbnail.className = "sequenceThumbnail";
     newSequenceItem.id = sequenceItem.id;
+    nameThumbnailContainer.className="clipNameThumbContainer";
     nameThumbnailContainer.appendChild(sequenceItemName);
     nameThumbnailContainer.appendChild(sequenceThumbnail);
     newSequenceItem.appendChild(nameThumbnailContainer);
@@ -448,8 +452,7 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     sizeControl.className = "lengthController";
     sizeControl.id = `${newSequenceItem.id}-lengthController`;
     sizeControl.addEventListener("mousedown", startClipAdjustment);
-    newSequenceItem.addEventListener("mousedown", startClipPositionAdjustment);
-    console.warn(sequenceItem.id);
+    nameThumbnailContainer.addEventListener("mousedown", startClipPositionAdjustment);
     if(gapBefore == true) {
         newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 2;
     } else {
@@ -467,16 +470,36 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     newSequenceItem.addEventListener("click", setSelectedSequenceItem);
 }
 
+function getGapsBeforeClip(layerIdx, clipIdx) {
+    let gapCounter = 0; // add this to index when parsing grid template str
+    let curClip = sequence[layerIdx][clipIdx];
+    if(clipIdx > 0) {
+        let prevClip = sequence[layerIdx][clipIdx - 1];
+        for(let i = 0; i < sequence[layerIdx].length; i++) { // stop when we get to current clip
+            if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
+                gapCounter++;
+            }
+
+            if(i == clipIdx) break;
+        }
+    }
+
+    return gapCounter;
+}
+
 let resizingClip = false;
 let movingClip = false;
+let gapInserted = false;
 let resizeStart = 0.0;
 let moveStart = 0.0;
+let gapsBeforeAdjustment = 0;
 let initialClipStartTime = 0.0;
 let initialResizeWidth = 0.0;
 let curSelectedClipForResize = undefined;
 let curSelectedClipForMove = undefined;
 
 function startClipAdjustment(e) {
+    console.warn("STARTING RESIZE");
     resizingClip = true;
     let curX = e.clientX;
     resizeStart = curX;
@@ -487,16 +510,24 @@ function startClipAdjustment(e) {
     let curClipElement = document.getElementById(`${layerId}-${clipId}`);
     let curClipLayer = document.getElementById(`clipLayer#${+(layerId) + 1}`);
     let gridParts = curClipElement.parentElement.style.gridTemplateColumns.split(" ");
-    initialResizeWidth = +(gridParts[clipId].replace("px", '')); // change to grid col size
+    gapsBeforeAdjustment = getGapsBeforeClip(layerId, clipId);
+    initialResizeWidth = +(gridParts[+(clipId) + gapsBeforeAdjustment].replace("px", '')); // change to grid col size
 }
 
 function startClipPositionAdjustment(e) {
+    console.warn("STARTING MOVE");
     movingClip = true;
     moveStart = e.clientX;
     curSelectedClipForMove = e.target;
-    let curSelectedClipIdx = +(curSelectedClipForMove.parentElement.id.split("-")[1]);
-    let clipLayerIdx = +(curSelectedClipForMove.parentElement.id.split("-")[0]);
+    while(curSelectedClipForMove.id.includes("-") == false) {
+        curSelectedClipForMove = curSelectedClipForMove.parentElement;
+    }
+    console.warn(curSelectedClipForMove);
+    let curSelectedClipIdx = +(curSelectedClipForMove.id.split("-")[1]);
+    let clipLayerIdx = +(curSelectedClipForMove.id.split("-")[0]);
+    console.warn(`${curSelectedClipIdx}-${clipLayerIdx}`);
     let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
+    gapsBeforeAdjustment = getGapsBeforeClip(clipLayerIdx, curSelectedClipIdx);
     initialClipStartTime = curClip.startTime;
 }
 
@@ -513,54 +544,31 @@ document.addEventListener("mousemove", function(e) {
         let curClipElement = document.getElementById(`${layerId}-${clipId}`);
         let newSize = (curX - resizeStart) + initialResizeWidth;
 
-        let gapCounter = 0; // add this to index when parsing grid template str
-        if(clipId > 0) {
-            let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
-            for(let i = 0; i < sequence[layerId].length; i++) { // stop when we get to current clip
-                if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
-                    gapCounter++;
-                }
-    
-                if(i == clipId) break;
-            }
-        }
-
-        gridParts[clipId + gapCounter] = `${newSize}px`;
+        gridParts[+(clipId) + gapsBeforeAdjustment] = `${newSize}px`;
         curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-        //curClipElement.style.width = gridParts[+(parts[1])];
-    }
-    if(movingClip) {
-        let curSelectedClipIdx = +(curSelectedClipForMove.parentElement.id.split("-")[1]);
-        let clipLayerIdx = +(curSelectedClipForMove.parentElement.id.split("-")[0]);
+    } else if(movingClip && curSelectedClipForMove) {
+        let curSelectedClipIdx = +(curSelectedClipForMove.id.split("-")[1]);
+        let clipLayerIdx = +(curSelectedClipForMove.id.split("-")[0]);
         let curClipLayer = document.getElementById(`clipLayer${clipLayerIdx + 1}`);
         let curGridStr = curClipLayer.style.gridTemplateColumns;
         let gridParts = curGridStr.split(" ");
         let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
         let secondsMoved = ((curX - moveStart) / pixelsPerSecond) + initialClipStartTime;
-        console.warn("moving clip @");
-        console.warn(`${curSelectedClipForMove.parentElement.id}`);
 
         if(curSelectedClipIdx > 0) {
             let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
-            let gapCounter = 0; // add this to index when parsing grid template str
-            for(let i = 0; i < sequence[clipLayerIdx].length; i++) { // stop when we get to current clip
-                if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
-                    gapCounter++;
-                }
-
-                if(i == curSelectedClipIdx) break;
-            }
             if((prevClip.startTime + prevClip.length) < curClip.startTime) {
-                let curGap = +(gridParts[(curSelectedClipIdx - 1) + gapCounter].replace("px", ''));
-                gridParts[(curSelectedClipIdx - 1) + gapCounter] = `${(curX - moveStart)}px`;
+                let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
+                gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment] = `${(curX - moveStart)}px`;
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-            } else {
+            } else if(gapInserted == false) {
+                gapInserted = true;
                 gridParts.splice(curSelectedClipIdx, 0, `${secondsMoved}px`);
                 console.warn(gridParts);
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-                curSelectedClipForMove.parentElement.style.gridColumn = +(curSelectedClipForMove.parentElement.style.gridColumn) + 1; 
+                curSelectedClipForMove.style.gridColumn = +(curSelectedClipForMove.style.gridColumn) + 1; 
             }
-            curClip.startTime = secondsMoved;
+            curClip.startTime = secondsMoved + .01;
         } else if(sequence[clipLayerIdx].length == 1) {
 
         }
@@ -578,7 +586,7 @@ document.addEventListener("mouseup", function(e) {
         let curClipLayer = document.getElementById(`clipLayer${+(parts[0]) + 1}`);
         let curGridStr = curClipLayer.style.gridTemplateColumns;
         let gridParts = curGridStr.split(" ");
-        let pxStr = gridParts[+(parts[1])];
+        let pxStr = gridParts[+(parts[1]) + gapsBeforeAdjustment];
         pxStr = pxStr.replace("px", "");
         curClip.length = +(pxStr) / pixelsPerSecond;
         let curClipElement = document.getElementById(curClip.id);
@@ -588,7 +596,9 @@ document.addEventListener("mouseup", function(e) {
     }
     if(curSelectedClipForMove && movingClip == true) {
         movingClip = false;
+        gapInserted =false;
     }
+    gapsBeforeAdjustment = 0;
 });
 
 function updateSequenceItemTransition(e) {

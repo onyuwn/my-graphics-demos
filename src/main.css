@@ -231,7 +231,12 @@ h1 {
 .lengthController {
     /* flex-grow: 1; */
     cursor: e-resize;
-    border-left: 5px dashed rgb(83, 26, 137);;
+    border-left: 5px dashed rgb(83, 26, 137);
+    transition: background-color .125s ease-in-out;
+}
+
+.lengthController:hover {
+    background-color: rgb(83, 26, 137);
 }
 
 #assetList, #mainSequenceControls {
