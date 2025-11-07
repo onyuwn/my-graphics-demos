@@ -30,6 +30,9 @@ const fragmentShaderSource = `
     uniform int sequenceIndex;
     uniform vec3 colorThreshold;
 
+    uniform float fadeInTransitionTime;
+    uniform int fadeInTransitionType;
+
     uniform sampler2D uSampler;
 
     vec2 random2( vec2 p ) {
@@ -40,33 +43,42 @@ const fragmentShaderSource = `
         vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
         gl_FragColor = texture2D(uSampler, uv);
         float transitionStart = (sequenceItemStartTime + sequenceItemLength) - transitionTime;
-        if(transitionType == 1 && time >= transitionStart)
-        {
-            gl_FragColor.a -= (time - transitionStart) / transitionTime;
-            //gl_FragColor *= cos(time * 10.0);
-        }
-        else if(transitionType == 2 && time >= transitionStart) {
-            gl_FragColor *= (random2(vTextureCoord + time).x - (time - transitionStart));
-        } else if(transitionType == 3 && time >= (transitionStart - .25)) {
-            vec2 cPos = -1.0 + 2.0 * uv;
-            // distance of current pixel from center
-            float cLength = length(cPos);
-            vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
-            gl_FragColor = texture2D(uSampler,newUv);
-            gl_FragColor.a -= (time - transitionStart) / transitionTime;
-        } else if(transitionType == 4 && time >= transitionStart) { // erase color increase threshold over time until black
-            vec4 diffuse = texture2D(uSampler,uv);
-            float rDiff = abs(diffuse.r - colorThreshold.r);
-            float gDiff = abs(diffuse.g - colorThreshold.g);
-            float bDiff = abs(diffuse.b - colorThreshold.b);
-            float rThreshold = (time - transitionStart) / transitionTime;
-            float gThreshold = (time - transitionStart) / transitionTime;
-            float bThreshold = (time - transitionStart) / transitionTime;
-            if(rDiff < rThreshold && gDiff < gThreshold && bDiff < bThreshold) {
-                discard;
-            } else {
-                gl_FragColor = diffuse;
-            }  
+        if(time >= transitionStart) {
+            if(transitionType == 1)
+            {
+                gl_FragColor.a -= (time - transitionStart) / transitionTime;
+                //gl_FragColor *= cos(time * 10.0);
+            }
+            else if(transitionType == 2) {
+                gl_FragColor *= (random2(vTextureCoord + time).x - (time - transitionStart));
+            } else if(transitionType == 3 && time >= (transitionStart - .25)) { // not sure why minus a quatrter
+                vec2 cPos = -1.0 + 2.0 * uv;
+                // distance of current pixel from center
+                float cLength = length(cPos);
+                vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
+                gl_FragColor = texture2D(uSampler,newUv);
+                gl_FragColor.a -= (time - transitionStart) / transitionTime;
+            } else if(transitionType == 4) { // erase color increase threshold over time until black
+                vec4 diffuse = texture2D(uSampler,uv);
+                float rDiff = abs(diffuse.r - colorThreshold.r);
+                float gDiff = abs(diffuse.g - colorThreshold.g);
+                float bDiff = abs(diffuse.b - colorThreshold.b);
+                float rThreshold = (time - transitionStart) / transitionTime;
+                float gThreshold = (time - transitionStart) / transitionTime;
+                float bThreshold = (time - transitionStart) / transitionTime;
+                if(rDiff < rThreshold && gDiff < gThreshold && bDiff < bThreshold) {
+                    discard;
+                } else {
+                    gl_FragColor = diffuse;
+                }  
+            }
+        } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0) {
+            float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
+            if(fadeInTransitionType == 1)
+            {
+                gl_FragColor.a = time / fadeInEnd;
+                //gl_FragColor *= cos(time * 10.0);
+            }
         }
         //gl_FragColor.a = time;
     }
@@ -224,6 +236,8 @@ function main() {
             sequenceIndex: gl.getUniformLocation(shaderProgram, "sequenceIndex"),
             sequenceItemStartTime: gl.getUniformLocation(shaderProgram, "sequenceItemStartTime"),
             colorThreshold: gl.getUniformLocation(shaderProgram, "colorThreshold"),
+            fadeInTransitionTime: gl.getUniformLocation(shaderProgram, "fadeInTransitionTime"),
+            fadeInTransitionType: gl.getUniformLocation(shaderProgram, "fadeInTransitionType"),
         }
     }
     const buffers = initBuffers(gl);
@@ -233,13 +247,17 @@ function main() {
                          texture:texture,
                          startTime:0.0,
                          length:4.0,
-                         id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1});
+                         id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1,
+                         fadeInTransitionType: 0,
+                         fadeInTransitionTime: 0});
     sequence[0].push({name:"test2",
                          texture:texture2,
                          startTime:4.0,
                          length:4.0,
                          id: "1-1",
-                         transitionType: 0, transitionTime: 1.0, clipLayer: 1});
+                         transitionType: 0, transitionTime: 1.0, clipLayer: 1,
+                         fadeInTransitionType: 0,
+                         fadeInTransitionTime: 0});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -473,15 +491,14 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
 function getGapsBeforeClip(layerIdx, clipIdx) {
     let gapCounter = 0; // add this to index when parsing grid template str
     let curClip = sequence[layerIdx][clipIdx];
-    if(clipIdx > 0) {
-        let prevClip = sequence[layerIdx][clipIdx - 1];
-        for(let i = 0; i < sequence[layerIdx].length; i++) { // stop when we get to current clip
-            if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
-                gapCounter++;
-            }
-
-            if(i == clipIdx) break;
+    for(let i = 0; i < clipIdx + 1; i++) { // stop when we get to current clip
+        if(i == 0) continue;
+        let prevClip = sequence[layerIdx][i - 1];
+        if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
+            gapCounter++;
         }
+
+        if(i == clipIdx) break;
     }
 
     return gapCounter;
@@ -511,6 +528,7 @@ function startClipAdjustment(e) {
     let curClipLayer = document.getElementById(`clipLayer#${+(layerId) + 1}`);
     let gridParts = curClipElement.parentElement.style.gridTemplateColumns.split(" ");
     gapsBeforeAdjustment = getGapsBeforeClip(layerId, clipId);
+    console.warn("gaps before resize: " + gapsBeforeAdjustment);
     initialResizeWidth = +(gridParts[+(clipId) + gapsBeforeAdjustment].replace("px", '')); // change to grid col size
 }
 
@@ -561,7 +579,7 @@ document.addEventListener("mousemove", function(e) {
                 let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
                 gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment] = `${(curX - moveStart)}px`;
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-            } else if(gapInserted == false) {
+            } else if(gapInserted == false) { // this inserts a gap every time....ughh
                 gapInserted = true;
                 gridParts.splice(curSelectedClipIdx, 0, `${secondsMoved}px`);
                 console.warn(gridParts);
@@ -866,6 +884,18 @@ document.getElementById("clipStartTimeInput").addEventListener("change", functio
 document.getElementById("transitionLengthInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         selectedSequenceItem.transitionTime = +(e.target.value)
+    }
+});
+
+document.getElementById("fadeInSelectionInput").addEventListener("change", function(e) {
+    if(selectedSequenceItem) {
+        selectedSequenceItem.fadeInTransitionType = +(e.target.value)
+    }
+});
+
+document.getElementById("fadeInLengthInput").addEventListener("change", function(e) {
+    if(selectedSequenceItem) {
+        selectedSequenceItem.fadeInTransitionTime = +(e.target.value)
     }
 });
 
