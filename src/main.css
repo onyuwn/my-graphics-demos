@@ -119,7 +119,7 @@ h1 {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-image: url("/uipamnel1.png");
+    background-image: url("/my-graphics-demos/uipamnel1.png");
     background-size: 100% 100%;
     /*background:radial-gradient(circle at center, rgb(169, 78, 255) 70%, transparent 30%), url('/uipamnel1.png') 100% center / cover;*/
 }
@@ -281,7 +281,7 @@ input[type="number"] {
     text-shadow:black 2px 2px;
     font-weight: bolder;
     margin-bottom: 5px;
-    background-image: url("/uipamnel1.png");
+    background-image: url("/my-graphics-demos/uipamnel1.png");
     background-size: 100% 100%;
     background-repeat: no-repeat;
     max-width: 100px;

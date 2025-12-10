@@ -203,7 +203,7 @@ let outGif = new GIF({
     quality: 10,
     width:256,
     height:256,
-    workerScript: 'dist/gif.worker.js'
+    workerScript: '/my-graphics-demos/src/dist/gif.worker.js'
 });
 
 let frameRate = 15;
@@ -250,19 +250,19 @@ function main() {
     const buffers = initBuffers(gl);
     const texture = loadTexture(gl, "/my-graphics-demos/ceiling1.png");
     const texture2 = loadTexture(gl, "/my-graphics-demos/sky.png");
-    sequence[0].push({name:"test1",
-                         texture:texture,
-                         startTime:0.0,
-                         length:4.0,
-                         id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1,
-                         fadeInTransitionType: 0,
-                         fadeInTransitionTime: 0});
+    // sequence[0].push({name:"test1",
+    //                      texture:texture,
+    //                      startTime:0.0,
+    //                      length:4.0,
+    //                      id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1,
+    //                      fadeInTransitionType: 0,
+    //                      fadeInTransitionTime: 0});
     sequence[0].push({name:"test2",
                          texture:texture2,
-                         startTime:4.0,
+                         startTime:0,
                          length:4.0,
-                         id: "1-1",
-                         transitionType: 0, transitionTime: 1.0, clipLayer: 1,
+                         id: "1-0",
+                         transitionType: 1, transitionTime: 1.0, clipLayer: 1,
                          fadeInTransitionType: 0,
                          fadeInTransitionTime: 0});
     updateTimeline();
@@ -278,8 +278,8 @@ function main() {
         let progressBarSearch = document.getElementById("viewport");
 
         if(progressBarSearch) {
-            //progressBarSearch.style.background=`radial-gradient(circle at center, rgb(169, 78, 255) ${progress * 100}%, url('/uipamnel1.png') ${100 - (progress * 100)}%)`;
-            progressBarSearch.style.background = `radial-gradient(circle at center, rgb(25, 255, 0) ${progress * 100}%, transparent ${100 - (progress * 100)}%), url('/uipamnel1.png') 100% center / cover`
+            //progressBarSearch.style.background=`radial-gradient(circle at center, rgb(169, 78, 255) ${progress * 100}%, url('/my-graphics-demos/uipamnel1.png') ${100 - (progress * 100)}%)`;
+            progressBarSearch.style.background = `radial-gradient(circle at center, rgb(25, 255, 0) ${progress * 100}%, transparent ${100 - (progress * 100)}%), url('/my-graphics-demos/uipamnel1.png') 100% center / cover`
         } else {
             let newProgressBar = document.createElement("div");
             newProgressBar.id = "exportProgressBar";
@@ -380,7 +380,7 @@ function getSequencerOffset() {
     return sequencerDiv.offsetLeft;
 }
 
-let defaultLength = 4.0;
+let defaultLength = 2.0;
 let defaultTransitionTime = 1.0;
 let selectedSequenceItem = undefined;
 
