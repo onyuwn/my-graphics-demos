@@ -203,7 +203,7 @@ let outGif = new GIF({
     quality: 10,
     width:256,
     height:256,
-    workerScript: '/my-graphics-demos/src/dist/gif.worker.js'
+    workerScript: '/my-graphics-demos/gif/gif.worker.js'
 });
 
 let frameRate = 15;
