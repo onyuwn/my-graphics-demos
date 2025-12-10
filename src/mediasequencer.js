@@ -248,8 +248,8 @@ function main() {
         }
     }
     const buffers = initBuffers(gl);
-    const texture = loadTexture(gl, "/ceiling1.png");
-    const texture2 = loadTexture(gl, "/sky.png");
+    const texture = loadTexture(gl, "/my-graphics-demos/ceiling1.png");
+    const texture2 = loadTexture(gl, "/my-graphics-demos/sky.png");
     sequence[0].push({name:"test1",
                          texture:texture,
                          startTime:0.0,
