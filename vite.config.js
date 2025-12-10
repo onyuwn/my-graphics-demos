@@ -7,6 +7,7 @@ export default {
             main: './index.html',
             sequencer: './sequencer.html',
             treebuilder: './treebuilder.html',
+            gifworker: './src/dist/gif.worker.js'
           },
         },
       },
