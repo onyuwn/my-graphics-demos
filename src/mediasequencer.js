@@ -74,10 +74,17 @@ const fragmentShaderSource = `
             }
         } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
-            if(fadeInTransitionType == 1)
-            {
+            if(fadeInTransitionType == 1) {
                 gl_FragColor.a = time / fadeInEnd;
-                //gl_FragColor *= cos(time * 10.0);
+            } else if(fadeInTransitionType == 2) {
+                gl_FragColor *= (random2(vTextureCoord + time).x * (time / fadeInEnd));
+            } else if(fadeInTransitionType == 3 && (time / fadeInEnd) < 1.0) { // not sure why minus a quatrter
+                vec2 cPos = -1.0 + 2.0 * uv;
+                // distance of current pixel from center
+                float cLength = length(cPos);
+                vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
+                gl_FragColor = texture2D(uSampler,newUv);
+                gl_FragColor.a = (time / fadeInEnd);
             }
         }
         //gl_FragColor.a = time;
@@ -349,7 +356,7 @@ function getTotalSequenceLength() { // update to return longest layer
         let length = 0;
         if(sequence[i].length > 0) {
             for(let j = 0; j < sequence[i].length; j++) { // factor in start time if gaps addeds
-                length += sequence[i][j].length;
+                length = sequence[i][j].startTime + sequence[i][j].length;
             }
             if(length > finalMaxLength) {
                 finalMaxLength = length;
@@ -510,6 +517,7 @@ let gapInserted = false;
 let resizeStart = 0.0;
 let moveStart = 0.0;
 let gapsBeforeAdjustment = 0;
+let initialGapWidth = 0;
 let initialClipStartTime = 0.0;
 let initialResizeWidth = 0.0;
 let curSelectedClipForResize = undefined;
@@ -546,12 +554,19 @@ function startClipPositionAdjustment(e) {
     console.warn(`${curSelectedClipIdx}-${clipLayerIdx}`);
     let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
     gapsBeforeAdjustment = getGapsBeforeClip(clipLayerIdx, curSelectedClipIdx);
+    if(gapsBeforeAdjustment > 0) {
+        let curClipLayer = document.getElementById(`clipLayer${clipLayerIdx + 1}`);
+        let curGridStr = curClipLayer.style.gridTemplateColumns;
+        let gridParts = curGridStr.split(" ");
+        initialGapWidth = +(gridParts[((curSelectedClipIdx) + gapsBeforeAdjustment) - 1].replace("px", ""));
+    }
     initialClipStartTime = curClip.startTime;
 }
 
 document.addEventListener("mousemove", function(e) {
     let curX = e.clientX;
     if(resizingClip == true && curSelectedClipForResize && e.target.id.includes("-") && e.target.id.split("-").length == 3) {
+        console.warn(`RESIZING ? GAPSB4 ${gapsBeforeAdjustment}`);
         let parts = curSelectedClipForResize.id.split("-");
         let layerId = parts[0];
         let clipId = parts[1];
@@ -575,18 +590,22 @@ document.addEventListener("mousemove", function(e) {
 
         if(curSelectedClipIdx > 0) {
             let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
-            if((prevClip.startTime + prevClip.length) < curClip.startTime) {
-                let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
-                gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment] = `${(curX - moveStart)}px`;
+            console.warn(`${(prevClip.startTime + prevClip.length)} < ${curClip.startTime} ? GAPSB4 ${gapsBeforeAdjustment} CLIP ${curSelectedClipIdx} GAP ${initialGapWidth} SECONDS ${secondsMoved}`)
+            if(((prevClip.startTime + prevClip.length) < curClip.startTime) || gapInserted == true) { // gap exists before clip
+                //gapsBeforeAdjustment is all gaps between clips before selected clip -- will help to get you the current index of selected inside of the grid template string
+                // let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
+                gridParts[((curSelectedClipIdx) + gapsBeforeAdjustment) - 1] = `${(curX - moveStart) + initialGapWidth}px`;
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
             } else if(gapInserted == false) { // this inserts a gap every time....ughh
                 gapInserted = true;
                 gridParts.splice(curSelectedClipIdx, 0, `${secondsMoved}px`);
+                console.warn(`GAP INSERTED: ${secondsMoved}`);
                 console.warn(gridParts);
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
                 curSelectedClipForMove.style.gridColumn = +(curSelectedClipForMove.style.gridColumn) + 1; 
             }
             curClip.startTime = secondsMoved + .01;
+            gapsBeforeAdjustment = getGapsBeforeClip(clipLayerIdx, curSelectedClipIdx);
         } else if(sequence[clipLayerIdx].length == 1) {
 
         }
@@ -614,7 +633,8 @@ document.addEventListener("mouseup", function(e) {
     }
     if(curSelectedClipForMove && movingClip == true) {
         movingClip = false;
-        gapInserted =false;
+        gapInserted = false;
+        console.warn("MOVE COMPLETE");
     }
     gapsBeforeAdjustment = 0;
 });
@@ -738,8 +758,9 @@ function updateLayerStartTimes(layer) {
                 curLayer[i].startTime = 0;
                 curLayerLength = curLayer[i].length;
             } else {
-                curLayer[i].startTime = curLayerLength;
-                curLayerLength += curLayer[i].length;
+                let diff = curLayer[i].startTime - curLayerLength;
+                curLayer[i].startTime += diff;
+                curLayerLength += curLayer[i].length + diff; // still not right
             }
         }
     }
