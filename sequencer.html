@@ -1,0 +1,159 @@
+<html>
+    <head>
+        <title>jake h sequencer</title>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+            integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
+            crossorigin="anonymous"
+            defer>
+        </script>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-DF6Joojw.js"></script>
+      <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-LOlyUKoN.css">
+    </head>
+    <body>
+        <div id="header">
+            <h1>Jake&nbsp;&nbsp;H</h1>
+            <img style="transform:scaleX(200%)" src="/my-graphics-demos/blinkingrowstars.gif"/>
+            <div id="headerButtons">
+                <a>BLOG</a>
+                <a>GALLERY</a>
+                <a>downloads</a>
+                <a>CONTACT</a>
+            </div>
+        </div>
+        <div id="root">
+            <div id="sidebar" class="sequencerLibrary">
+                <input id="sequenceItemInput" type="file"/>
+                <div id="assetList">
+                    <h3>Library</h3>
+                </div>
+                <div id="sequenceItemInspect">
+                    <h3>Clip Settings</h3>
+                    <!-- <p></p> -->
+                    <div class="sequenceInfoItem">
+                        <p>Clip Name</p>
+                        <p id="clipNameLabel"></p>
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Clip Start Time</p>
+                        <input id="clipStartTimeInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Clip Length</p>
+                        <input id="clipLengthInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Fade in</p>
+                        <select id="fadeInSelectionInput">
+                            <option value="0">CUT</option>
+                            <option value="1">FADE</option>
+                            <option value="2">DISSOLVE</option>
+                            <option value="3">RIPPLE</option>
+                            <option value="4">COLOR THRESHOLD</option>
+                            <option value="4">NEW</option>
+                        </select>
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Fade In Length</p>
+                        <input id="fadeInLengthInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Clip Effect</p>
+                        <select id="clipEffectInput">
+                            <option value="0">CUT</option>
+                            <option value="1">FADE</option>
+                            <option value="2">DISSOLVE</option>
+                            <option value="3">RIPPLE</option>
+                            <option value="4">COLOR THRESHOLD</option>
+                            <option value="4">NEW</option>
+                        </select>
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Fade out</p>
+                        <select id="transitionSelectionInput">
+                            <option value="0">CUT</option>
+                            <option value="1">FADE</option>
+                            <option value="2">DISSOLVE</option>
+                            <option value="3">RIPPLE</option>
+                            <option value="4">COLOR THRESHOLD</option>
+                            <option value="4">NEW</option>
+                        </select>
+                    </div>
+                    <div class="sequenceInfoItem" id="transitionStyleInputSection">
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Transition Length</p>
+                        <input id="transitionLengthInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Size</p>
+                        <input id="clipWidthInput" type="number" />
+                        <input id="clipHeightInput" type="number" />
+                    </div>
+                    <div class="sequenceInfoItem">
+                        <p>Clip Layer</p>
+                        <select id="clipLayerSelection">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <button id="removeClipButton">remove clip</button>
+                </div>
+                <div id="mainSequenceControls">
+                    <h3>Render Settings</h3>
+                    <div class="renderSettingsItem">
+                        <p>Output Type</p>
+                        <select>
+                            <option value="1">GIF</option>
+                        </select>
+                    </div>
+                    <div class="renderSettingsItem">
+                        <p>Output Dimensions</p>
+                        <div style="display:flex">
+                            <input placeholder="width" id="outputWidthInput" value="256" type="number" />
+                            <input placeholder="height" id="outputHeightInput" value="256" type="number" />
+                        </div>
+                    </div>
+                    <div class="renderSettingsItem" style="display:flex;justify-content: space-between;">
+                        <p>FPS</p>
+                        <input id="frameRateInput" value="15" type="number"/>
+                    </div>
+                    <button id="exportButton">export</button>
+                </div>
+            </div>
+            <div id="contentRoot">
+                <div class="post" id="sequencerRoot">
+                    <div id="viewportContainer">
+                        <div id="viewport">
+                            <canvas id="gl-canvas" width="256" height="256"></canvas>
+                        </div>
+                        <input type="range" id="viewportScale" value="1" min="1" max="4" step=".25"/>
+                    </div>
+                    <div id="sequencerControls">
+                        <button class="controlButton" id="sequencerStartStop">play</button>
+                        <button class="controlButton" id="sequencerRestart">restart</button>
+                    </div>
+                    <div id="sequenceTimerContainer">
+                        <div id="sequenceTimer">
+                            <p class="value" id="timeValue"></p>
+                            <p class="value">&nbsp;&nbsp;/&nbsp;&nbsp;</p>
+                            <p class="value" id="sequenceLengthValue"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="miniPost" id="sequencerTimeline">
+                    <div id="sequenceMarker"></div>
+                    <div class="clipLayer" id="clipLayer5"></div> <!--grid columns managed by script-->
+                    <div class="clipLayer" id="clipLayer4"></div>
+                    <div class="clipLayer" id="clipLayer3"></div>
+                    <div class="clipLayer" id="clipLayer2"></div>
+                    <div class="clipLayer" id="clipLayer1"></div>
+                    <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

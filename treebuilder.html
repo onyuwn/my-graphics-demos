@@ -1,0 +1,73 @@
+<html>
+    <head>
+        <title>jake h</title>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/treebuilder-pYKygWGc.js"></script>
+      <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-LOlyUKoN.css">
+    </head>
+    <body>
+        <div id="header">
+            <h1>Jake&nbsp;&nbsp;H</h1>
+            <img style="transform:scaleX(200%)" src="/my-graphics-demos/blinkingrowstars.gif"/>
+            <div id="headerButtons">
+                <a>BLOG</a>
+                <a>GALLERY</a>
+                <a>downloads</a>
+                <a>CONTACT</a>
+            </div>
+        </div>
+        <div id="root">
+            <div id="sidebar" class="treeBuilderControls">
+                <div class="treeBuilderControl">
+                    <p>Leaf Length</p>
+                    <input id="leafLengthControl" type="range" min="-5.0" max="5.0" step=".05" value="1" />
+                    <input type="number" id="leafLengthInput" value="1" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Count</p>
+                    <input id="leafCountControl" type="range" min="1.0" max="1000.0" step="1" value="10" />
+                    <input type="number" id="leafCountInput" value="10" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Density</p>
+                    <input id="leafDensityControl" type="range" min="0.0" max="1000.0" step=".05" value="10" />
+                    <input type="number" id="leafDensityInput" value="10" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Noise Min</p>
+                    <input id="leafNoiseMinControl" type="range" min="-1000.0" max="1000.0" step=".05" />
+                    <input type="number" id="leafNoiseMinInput" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Noise Max</p>
+                    <input id="leafNoiseMaxControl" type="range" min="-1000.0" max="1000.0" step=".05" />
+                    <input type="number" id="leafNoiseMaxInput" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Length Attenuation</p>
+                    <input id="leafLengthAttenuationControl" type="range" min="-3.0" max="3.0" step=".05" value="1.0" />
+                    <input type="number" id="leafAttenuationInput" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>tree count</p>
+                    <input type="range" min="1" max="25" step="1" id="treeCountControl" value="1" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>taper?</p>
+                    <input type="checkbox" id="treeTaperControl" />
+                </div>
+                <div class="treeBuilderControl">
+                    <p>Leaf Color</p>
+                    <input type="color" id="leafColorControl" />
+                </div>
+                <!-- leaf tx -->
+                <!-- tree shape -->
+            </div>
+            <div id="contentRoot">
+                <div class="post" id="treeBuilderRoot">
+                    <canvas id="renderer-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
