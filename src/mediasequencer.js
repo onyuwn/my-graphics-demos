@@ -420,6 +420,7 @@ function addItemToSequence(file, texture, imgData, layer) {
 function updateTimeline() {
     console.warn("sequence update");
     console.warn(sequence);
+    updateSequenceTimelineRuler();
     for(let i = 0; i < MAX_LAYERS; i++) {
         if(sequence[i].length > 0) {
             let curClipLayer = document.getElementById(`clipLayer${i+1}`);
@@ -452,6 +453,24 @@ function updateTimeline() {
         }
     }
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
+}
+
+function updateSequenceTimelineRuler() {
+    let ruler = document.getElementById("timelineRuler");
+    ruler.innerHTML = ""; 
+    let rulerWidth = ruler.offsetWidth;
+    let ticks = rulerWidth / pixelsPerSecond;
+    console.warn(`${rulerWidth} / ${pixelsPerSecond}`);
+    console.warn(ticks);
+
+    // consider scroll pos of timeline too ...
+    for(let i = 0; i<ticks; i++) {
+            let tickMarkElement = document.createElement("div");
+    tickMarkElement.className = "sequenceTimelineRulerTick"; 
+        tickMarkElement.style.left = (i+1)*pixelsPerSecond;
+        ruler.appendChild(tickMarkElement);
+        console.warn("tick added");
+    }
 }
 
 function createNewSequenceItem(sequenceItem, gapBefore = false) {
@@ -925,3 +944,6 @@ function clearAllClipLayers() {
         clearClipLayer(i);
     }
 }
+
+var tl = document.getElementById("sequencerTimeline");
+tl.scrollTop = tl.scrollHeight;
