@@ -412,7 +412,7 @@ function addItemToSequence(file, texture, imgData, layer) {
     requestedCaptureFrames = frameRate * getTotalSequenceLength();
 
     let curLayer = document.getElementById(`clipLayer${newItem.clipLayer}`);
-    let gridPartsStr = curLayer.style.gridTemplateColumns.split(" ");
+    let gridPartsStr = curLayer.style.gridTemplateColumns.split(" "); // issues here with initializing size... clip css uses auto for first grid column
     gridPartsStr.push(`${newItem.length * pixelsPerSecond}px`);
     curLayer.style.gridTemplateColumns = gridPartsStr.join(" ");
 }
@@ -434,11 +434,10 @@ function updateTimeline() {
                     prevClip = sequence[i][j - 1];
                     dClip = curTexture.startTime - (prevClip.length + prevClip.startTime);
                 }
-
+                let gapsBefore = getGapsBeforeClip(i, j);
                 // add empty column if end of previous does not equal start of next clip
                 if(prevClip && prevClip.length + prevClip.startTime < curTexture.startTime) {
-                    let delta = curTexture.startTime - (prevClip.length + prevClip.startTime);
-                    gridRowsStr += `${delta * pixelsPerSecond}px `;
+                    gridRowsStr += `${dClip * pixelsPerSecond}px `;
                     gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
                     curTexture.id = `${i}-${j}`;
                     console.warn("adding gap");
@@ -465,9 +464,15 @@ function updateSequenceTimelineRuler() {
 
     // consider scroll pos of timeline too ...
     for(let i = 0; i<ticks; i++) {
-            let tickMarkElement = document.createElement("div");
-    tickMarkElement.className = "sequenceTimelineRulerTick"; 
+        let tickMarkElement = document.createElement("div");
+        tickMarkElement.className = "sequenceTimelineRulerTick"; 
         tickMarkElement.style.left = (i+1)*pixelsPerSecond;
+
+        if(i % 5 == 0) {
+            let tickLabel = document.createElement("p");
+            tickLabel.innerHTML = i.toString();
+            tickMarkElement.appendChild(tickLabel);
+        }
         ruler.appendChild(tickMarkElement);
         console.warn("tick added");
     }
@@ -497,14 +502,18 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     sizeControl.id = `${newSequenceItem.id}-lengthController`;
     sizeControl.addEventListener("mousedown", startClipAdjustment);
     nameThumbnailContainer.addEventListener("mousedown", startClipPositionAdjustment);
-    if(gapBefore == true) {
+    let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`);
+    let gridParts = curLayer.style.gridTemplateColumns.split(" ");
+    let sequenceItemIdx = +(sequenceItem.id.split("-")[1]);
+    let layerIdx = +(sequenceItem.id.split("-")[0]);
+    console.warn(sequenceItemIdx);
+    if(gapBefore == true || getGapsBeforeClip(layerIdx, sequenceItemIdx) > 0) { // this breaks when adding clips to layers where first clip does not start 
         newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 2;
     } else {
         newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 1;
     }
     //sizeControl.addEventListener("mouseup", endClipAdjustment);
     newSequenceItem.appendChild(sizeControl);
-    let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`)
     curLayer.appendChild(newSequenceItem);
     
     // let gridPartsStr = curLayer.style.gridTemplateColumns;
@@ -518,7 +527,16 @@ function getGapsBeforeClip(layerIdx, clipIdx) {
     let gapCounter = 0; // add this to index when parsing grid template str
     let curClip = sequence[layerIdx][clipIdx];
     for(let i = 0; i < clipIdx + 1; i++) { // stop when we get to current clip
-        if(i == 0) continue;
+        if(i == 0) {
+            console.warn(`clipLayer${layerIdx + 1}`);
+            let curClipLayer = document.getElementById(`clipLayer${+(layerIdx) + 1}`);
+            let curGridStr = curClipLayer.style.gridTemplateColumns;
+            let gridParts = curGridStr.split(" ");
+            if(gridParts.length > 1){
+                return 1;
+            }
+            continue;
+        }
         let prevClip = sequence[layerIdx][i - 1];
         if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
             gapCounter++;
@@ -598,6 +616,7 @@ document.addEventListener("mousemove", function(e) {
 
         gridParts[+(clipId) + gapsBeforeAdjustment] = `${newSize}px`;
         curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
+        updateClipLengthInputValue(newSize/pixelsPerSecond);
     } else if(movingClip && curSelectedClipForMove) {
         let curSelectedClipIdx = +(curSelectedClipForMove.id.split("-")[1]);
         let clipLayerIdx = +(curSelectedClipForMove.id.split("-")[0]);
@@ -607,10 +626,14 @@ document.addEventListener("mousemove", function(e) {
         let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
         let secondsMoved = ((curX - moveStart) / pixelsPerSecond) + initialClipStartTime;
 
-        if(curSelectedClipIdx > 0) {
+        if(sequence[clipLayerIdx].length >= 1) {
             let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
-            console.warn(`${(prevClip.startTime + prevClip.length)} < ${curClip.startTime} ? GAPSB4 ${gapsBeforeAdjustment} CLIP ${curSelectedClipIdx} GAP ${initialGapWidth} SECONDS ${secondsMoved}`)
-            if(((prevClip.startTime + prevClip.length) < curClip.startTime) || gapInserted == true) { // gap exists before clip
+            if(prevClip) {
+                console.warn(`${(prevClip.startTime + prevClip.length)} < ${curClip.startTime} ? GAPSB4 ${gapsBeforeAdjustment} CLIP ${curSelectedClipIdx} GAP ${initialGapWidth} SECONDS ${secondsMoved}`)                
+            } else {
+                console.warn(` GAPSB4 ${gapsBeforeAdjustment}`);
+            }
+            if(gapsBeforeAdjustment > 0 || gapInserted == true) { // gap exists before clip
                 //gapsBeforeAdjustment is all gaps between clips before selected clip -- will help to get you the current index of selected inside of the grid template string
                 // let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
                 gridParts[((curSelectedClipIdx) + gapsBeforeAdjustment) - 1] = `${(curX - moveStart) + initialGapWidth}px`;
@@ -621,15 +644,13 @@ document.addEventListener("mousemove", function(e) {
                 console.warn(`GAP INSERTED: ${secondsMoved}`);
                 console.warn(gridParts);
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
+                console.warn("updating grid column: " + +(curSelectedClipForMove.style.gridColumn) + 1);
                 curSelectedClipForMove.style.gridColumn = +(curSelectedClipForMove.style.gridColumn) + 1; 
             }
             curClip.startTime = secondsMoved + .01;
             gapsBeforeAdjustment = getGapsBeforeClip(clipLayerIdx, curSelectedClipIdx);
-        } else if(sequence[clipLayerIdx].length == 1) {
-
         }
-        // clearAllClipLayers();
-        // updateTimeline();
+        updateClipStartTimeInputValue(curClip.startTime);
     }
 });
 

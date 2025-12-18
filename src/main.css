@@ -149,7 +149,7 @@ h1 {
     /* position: absolute; */
     display: grid;
     grid-template-columns: auto 32px;
-    width: auto;
+    width: 100%;
 }
 
 #contentRoot {
@@ -255,7 +255,7 @@ h1 {
 #assetList, #mainSequenceControls {
     margin-top:5px;
     min-height: 200px;
-    background-image:url("/greenapple.jpg");
+    background-image:url('/kitchenfloor2.png');
     border: 2px solid rgb(169, 78, 255);
     box-shadow: inset -1px -3px 3px 3px rgb(52, 0, 0);
     padding: 5px;
@@ -268,7 +268,7 @@ h1 {
     margin-top:5px;
     margin-bottom:5px;
     min-height: 200px;
-    background-image:url("/greenapple.jpg");
+    background-image:url('/kitchenfloor2.png');
     border: 2px solid rgb(169, 78, 255);
     box-shadow: inset  -2px -1px 5px 3px rgb(52, 0, 0);
     padding: 5px;
@@ -276,7 +276,12 @@ h1 {
 }
 
 .selected {
-    border: 2px dashed rgb(255, 226, 78);
+    background: yellow !important;
+    box-shadow: -2px -1px 5px 3px rgb(52, 0, 0) !important;
+}
+
+.selected .sequenceItemName {
+    color:rgb(169, 78, 255) !important;
 }
 
 .sequenceInfoItem {
@@ -320,5 +325,12 @@ input[type="number"] {
     justify-content: center;
     align-items: center;
     padding:1px;
-    background-color: rgb(169, 78, 255);;
+    background-image:url('/kitchenfloor2.png');
+}
+
+.sequenceInfoItem select {
+    background-image:url('/mattresstx.png');
+    font-family: "angelicpeace";
+    font-size: 24px;
+    color:blue;
 }
