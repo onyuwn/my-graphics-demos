@@ -149,7 +149,7 @@ h1 {
     /* position: absolute; */
     display: grid;
     grid-template-columns: auto 32px;
-    width: 100%;
+    width: auto;
 }
 
 #contentRoot {

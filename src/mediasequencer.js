@@ -370,7 +370,15 @@ function getTotalSequenceLength() { // update to return longest layer
 function getLayerLength(layerIdx) {
     let total = 0.0;
     for(let i = 0; i < sequence[layerIdx].length; i++) {
-        total+=sequence[layerIdx][i].length;
+        let prevClip = sequence[layerIdx][i - 1];
+        let curClip = sequence[layerIdx][i];
+        let dClip = 0;
+        if(prevClip) {
+            dClip = curClip.startTime - total;
+        } else if(i == 0 && curClip.startTime > 0) {
+            dClip = curClip.startTime;
+        }
+        total+=sequence[layerIdx][i].length + dClip;
     }
     return total;
 }
@@ -380,14 +388,11 @@ function getSequencerOffset() {
     return sequencerDiv.offsetLeft;
 }
 
-let defaultLength = 2.0;
+let defaultLength = 4.0;
 let defaultTransitionTime = 1.0;
 let selectedSequenceItem = undefined;
 
 function addItemToSequence(file, texture, imgData, layer) {
-    console.warn(sequence);
-    console.warn(`sequencelenfght: ${sequence.length}`);
-
     let newItem = {
         name:file.name,
         texture:texture,
@@ -407,7 +412,11 @@ function addItemToSequence(file, texture, imgData, layer) {
         newItem
     );
 
+    console.warn(newItem);
+
+
     createNewSequenceItem(newItem);
+    console.warn(sequence);
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
     requestedCaptureFrames = frameRate * getTotalSequenceLength();
 
@@ -436,7 +445,7 @@ function updateTimeline() {
                 }
                 let gapsBefore = getGapsBeforeClip(i, j);
                 // add empty column if end of previous does not equal start of next clip
-                if(prevClip && prevClip.length + prevClip.startTime < curTexture.startTime) {
+                if((prevClip && prevClip.length + prevClip.startTime < curTexture.startTime)) {
                     gridRowsStr += `${dClip * pixelsPerSecond}px `;
                     gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
                     curTexture.id = `${i}-${j}`;
@@ -506,12 +515,14 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     let gridParts = curLayer.style.gridTemplateColumns.split(" ");
     let sequenceItemIdx = +(sequenceItem.id.split("-")[1]);
     let layerIdx = +(sequenceItem.id.split("-")[0]);
-    console.warn(sequenceItemIdx);
-    if(gapBefore == true || getGapsBeforeClip(layerIdx, sequenceItemIdx) > 0) { // this breaks when adding clips to layers where first clip does not start 
+    let gapCt = getGapsBeforeClip(layerIdx, sequenceItemIdx);
+    if(gapBefore == true) { // this breaks when adding clips to layers where first clip does not start 
         newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 2;
     } else {
         newSequenceItem.style.gridColumn = +(sequenceItem.id.split("-")[1]) + 1;
     }
+    console.warn(`gaps before new: ${gapCt}`);
+    newSequenceItem.style.gridColumn = ((sequenceItemIdx) + gapCt) + 1;
     //sizeControl.addEventListener("mouseup", endClipAdjustment);
     newSequenceItem.appendChild(sizeControl);
     curLayer.appendChild(newSequenceItem);
@@ -527,18 +538,10 @@ function getGapsBeforeClip(layerIdx, clipIdx) {
     let gapCounter = 0; // add this to index when parsing grid template str
     let curClip = sequence[layerIdx][clipIdx];
     for(let i = 0; i < clipIdx + 1; i++) { // stop when we get to current clip
-        if(i == 0) {
-            console.warn(`clipLayer${layerIdx + 1}`);
-            let curClipLayer = document.getElementById(`clipLayer${+(layerIdx) + 1}`);
-            let curGridStr = curClipLayer.style.gridTemplateColumns;
-            let gridParts = curGridStr.split(" ");
-            if(gridParts.length > 1){
-                return 1;
-            }
-            continue;
-        }
         let prevClip = sequence[layerIdx][i - 1];
-        if((prevClip.startTime + prevClip.length) < curClip.startTime) { 
+        if(prevClip && (prevClip.startTime + prevClip.length) < curClip.startTime) { 
+            gapCounter++;
+        } else if(!prevClip && i == 0 && sequence[layerIdx][0].startTime > 0) {
             gapCounter++;
         }
 
@@ -633,14 +636,19 @@ document.addEventListener("mousemove", function(e) {
             } else {
                 console.warn(` GAPSB4 ${gapsBeforeAdjustment}`);
             }
-            if(gapsBeforeAdjustment > 0 || gapInserted == true) { // gap exists before clip
+
+            if((curSelectedClipIdx == 0 && curClip.startTime > 0) || (prevClip && ((prevClip.startTime + prevClip.length) < curClip.startTime))) {
+                gapInserted = true;
+            }
+
+            if(gapInserted == true) { // need to do something like all gaps before and is gap right before?
                 //gapsBeforeAdjustment is all gaps between clips before selected clip -- will help to get you the current index of selected inside of the grid template string
                 // let curGap = +(gridParts[(curSelectedClipIdx) + gapsBeforeAdjustment].replace("px", ''));
                 gridParts[((curSelectedClipIdx) + gapsBeforeAdjustment) - 1] = `${(curX - moveStart) + initialGapWidth}px`;
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
             } else if(gapInserted == false) { // this inserts a gap every time....ughh
                 gapInserted = true;
-                gridParts.splice(curSelectedClipIdx, 0, `${secondsMoved}px`);
+                gridParts.splice(((curSelectedClipIdx) + gapsBeforeAdjustment), 0, `${secondsMoved}px`);
                 console.warn(`GAP INSERTED: ${secondsMoved}`);
                 console.warn(gridParts);
                 curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
@@ -795,7 +803,7 @@ function updateLayerStartTimes(layer) {
         let curLayerLength = 0;
         for(let i = 0; i < curLayer.length; i++) {
             if(i == 0) {
-                curLayer[i].startTime = 0;
+                //curLayer[i].startTime = 0;
                 curLayerLength = curLayer[i].length;
             } else {
                 let diff = curLayer[i].startTime - curLayerLength;
