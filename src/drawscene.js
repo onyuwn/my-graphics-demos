@@ -22,7 +22,7 @@ function drawScene(gl, programInfo, buffers, sequence, time, delta) { // isPlayi
         if(curLayer.length > 0) {
             for(let j = 0; j < curLayer.length; j++) {
                 let curClip = curLayer[j]
-                if(time >= curClip.startTime && time <= (curClip.startTime + curClip.length)) {
+                if(time >= curClip.startTime && time <= (curClip.startTime + curClip.length) && curClip.clipType == "image") {
                     gl.depthMask(false);
                     gl.enable(gl.BLEND);
                     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
