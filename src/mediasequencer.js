@@ -262,7 +262,7 @@ function main() {
                          texture:texture2,
                          startTime:0,
                          length:4.0,
-                         id: "1-0",
+                         id: "0-0",
                          transitionType: 1, transitionTime: 1.0, clipLayer: 1,
                          fadeInTransitionType: 0,
                          fadeInTransitionTime: 0,
@@ -372,15 +372,7 @@ function getTotalSequenceLength() { // update to return longest layer
 function getLayerLength(layerIdx) {
     let total = 0.0;
     for(let i = 0; i < sequence[layerIdx].length; i++) {
-        let prevClip = sequence[layerIdx][i - 1];
-        let curClip = sequence[layerIdx][i];
-        let dClip = 0;
-        if(prevClip) {
-            dClip = curClip.startTime - total;
-        } else if(i == 0 && curClip.startTime > 0) {
-            dClip = curClip.startTime;
-        }
-        total+=sequence[layerIdx][i].length + dClip;
+        total+=sequence[layerIdx][i].length;
     }
     return total;
 }
@@ -448,34 +440,7 @@ function updateTimeline() { // rebuilds timeline from sequence data
     updateSequenceTimelineRuler();
     for(let i = 0; i < MAX_LAYERS; i++) { // call update layer
         if(sequence[i].length > 0) {
-            let curClipLayer = document.getElementById(`clipLayer${i+1}`);
-            let gridRowsStr = "";
-            for(let j = 0; j < sequence[i].length; j++) {
-                let curTexture = sequence[i][j];
-                let prevClip = undefined;
-                let dClip = -1;
-
-                if(j > 0)  {
-                    prevClip = sequence[i][j - 1];
-                    dClip = curTexture.startTime - (prevClip.length + prevClip.startTime);
-                } else {
-                    dClip = curTexture.startTime;
-                }
-                let gapsBefore = getGapsBeforeClip(i, j);
-                // add empty column if end of previous does not equal start of next clip
-                if(dClip > 0 || (prevClip && prevClip.length + prevClip.startTime < curTexture.startTime)) {
-                    gridRowsStr += `${dClip * pixelsPerSecond}px `;
-                    gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
-                    curTexture.id = `${i}-${j}`;
-                    console.warn("adding gap");
-                    createNewSequenceItem(curTexture, true);
-                } else {
-                    gridRowsStr += `${curTexture.length * pixelsPerSecond}px `;
-                    curTexture.id = `${i}-${j}`;
-                    createNewSequenceItem(curTexture);
-                }
-            }
-            curClipLayer.style.gridTemplateColumns = gridRowsStr;
+            updateLayer(i);
         }
     }
     document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
@@ -589,13 +554,11 @@ function startClipAdjustment(e) {
     let parts = curSelectedClipForResize.id.split("-");
     let layerId = parts[0];
     let clipId = parts[1];
+    let curClip = sequence[layerId][clipId];
     setSelectedSequenceItemInternal(`${layerId}-${clipId}`);
     let curClipElement = document.getElementById(`${layerId}-${clipId}`);
     let curClipLayer = document.getElementById(`clipLayer#${+(layerId) + 1}`);
-    let gridParts = curClipElement.parentElement.style.gridTemplateColumns.split(" ");
-    gapsBeforeAdjustment = getGapsBeforeClip(layerId, clipId);
-    console.warn("gaps before resize: " + gapsBeforeAdjustment);
-    initialResizeWidth = +(gridParts[+(clipId) + gapsBeforeAdjustment].replace("px", '')); // change to grid col size
+    initialResizeWidth = curClip.length * pixelsPerSecond; // change to grid col size
 }
 
 function startClipPositionAdjustment(e) {
@@ -651,20 +614,16 @@ function insertGap(layerIdx, clipIdx) { // clip to insert gap before
 document.addEventListener("mousemove", function(e) {
     let curX = e.clientX;
     if(resizingClip == true && curSelectedClipForResize && e.target.id.includes("-") && e.target.id.split("-").length == 3) {
-        console.warn(`RESIZING ? GAPSB4 ${gapsBeforeAdjustment}`);
         let parts = curSelectedClipForResize.id.split("-");
-        let layerId = parts[0];
-        let clipId = parts[1];
-        let curClipLayer = document.getElementById(`clipLayer${+(layerId) + 1}`);
-
-        let curGridStr = curClipLayer.style.gridTemplateColumns;
-        let gridParts = curGridStr.split(" ");
-        let curClipElement = document.getElementById(`${layerId}-${clipId}`);
+        console.warn(parts);
+        let layerId = +(parts[0]);
+        let clipId = +(parts[1]);
+        let curClip = sequence[layerId][clipId];
         let newSize = (curX - resizeStart) + initialResizeWidth;
-
-        gridParts[+(clipId) + gapsBeforeAdjustment] = `${newSize}px`;
-        curClipLayer.style.gridTemplateColumns = gridParts.join(" ");
-        updateClipLengthInputValue(newSize/pixelsPerSecond);
+        let newClipLength = newSize/pixelsPerSecond;
+        updateClipLength(newClipLength); // wait if there are clips after we need to update their start times....
+        updateClipLengthInputValue(newClipLength);
+        updateLayer(layerId);
     } else if(movingClip && curSelectedClipForMove) {
         let curSelectedClipIdx = +(curSelectedClipForMove.id.split("-")[1]);
         let clipLayerIdx = +(curSelectedClipForMove.id.split("-")[0]);
@@ -707,20 +666,8 @@ document.addEventListener("mouseup", function(e) {
     if(curSelectedClipForResize) {
         console.warn("completing resize");
         resizingClip = false;
-        let parts = curSelectedClipForResize.id.split("-");
-        let curClip = sequence[+(parts[0])][+(parts[1])];
-        let curClipLayer = document.getElementById(`clipLayer${+(parts[0]) + 1}`);
-        let curGridStr = curClipLayer.style.gridTemplateColumns;
-        let gridParts = curGridStr.split(" ");
-        let pxStr = gridParts[+(parts[1]) + gapsBeforeAdjustment];
-        pxStr = pxStr.replace("px", "");
-        //curClip.length = +(pxStr) / pixelsPerSecond;
-        let curClipElement = document.getElementById(curClip.id);
-        //curClipElement.style.width = gridParts[+(parts[1])];
-        updateClipLength(+(pxStr) / pixelsPerSecond)
         curSelectedClipForResize = undefined;
         selectedSequenceItem = undefined;
-        //updateLayerStartTimes(+(parts[0]))//update start times
     }
     if(curSelectedClipForMove && movingClip == true) {
         movingClip = false;
@@ -867,22 +814,13 @@ function updateClipLayerInputValue(clipLayer) {
 }
 
 function updateClipLength(length) {
-    if(!selectedSequenceItem && curSelectedClipForResize) {
-        let parts = curSelectedClipForResize.id.split("-");
-        selectedSequenceItem = sequence[+(parts[0])][+(parts[1])];
-    }
-    console.warn(selectedSequenceItem);
     let delta = length - selectedSequenceItem.length;
     selectedSequenceItem.length = length;
     let clipIdx = +(selectedSequenceItem.id.split("-")[1]);
-    console.warn(`updating clip on ${selectedSequenceItem.clipLayer}-${clipIdx}`)
     updateLayerStartTimes(selectedSequenceItem.clipLayer - 1, clipIdx, delta);
-    //clearClipLayer(selectedSequenceItem.clipLayer);
-    //clearAllClipLayers();
-    //updateTimeline();
 }
 
-function updateLayerStartTimes(layer, clipIdx, delta) {
+function updateLayerStartTimes(layer, clipIdx, delta) { // used for when clips move layers
     let curLayer = sequence[layer];
     if(curLayer.length > 0) {
         for(let i = 0; i < curLayer.length; i++) {
@@ -894,6 +832,41 @@ function updateLayerStartTimes(layer, clipIdx, delta) {
     }
     console.warn("start times fixed");
     console.warn(curLayer);
+}
+
+function removeClipFromLayer(layerIdx, clipIdx) { // return clip that is removed
+    // first check to see if this is in between two gaps. if so, collapse them into one after removing
+    let prevClip = sequence[layerIdx][clipIdx - 1];
+    let nextClip = sequence[layerIdx][clipIdx + 1];
+    let layerClipLength = sequence[layerIdx].length;
+    let removed = sequence[layerIdx].splice(clipIdx, 1);
+    if(nextClip && nextClip.clipType == "gap" && prevClip && prevClip.clipType == "gap") {
+        // remove next clip as well and add lendth to prev but also if no clips after next then remove both lol
+        let nextClipIdx = +(nextClip.id.split("-")[1]);
+        let prevClipIdx = +(prevClip.id.split("-")[1]);
+        if(nextClipIdx >= layerClipLength - 1) { // mo clips exist after remove both gaps
+            sequence[layerIdx].splice(prevClipIdx, 2);
+        } else {
+            sequence[layerIdx].splice(nextClipIdx - 1, 2); // minus 1 bc we removed requested clip already
+            prevClip.length += nextClip.length;
+        }
+    }
+    //  else if(nextClip && nextClip.clipType == "gap") { // if only the next clip is a gap remove it. if no next clip but prev clip is a gap remove it
+    // } else if(prevClip && prevClip.clipType == "gap") { // if only the next clip is a gap remove it. if no next clip but prev clip is a gap remove it
+    // }
+    // update start times and indexes / ids of all clips after
+    for(let i = clipIdx; i < sequence[layerIdx].length; i++) {
+        sequence[layerIdx][i].startTime -= removed[0].length;
+        sequence[layerIdx][i].id = `${layerIdx}-${i}`
+    }
+    return removed[0];
+}
+
+function appendClipToLayer(newLayerIdx, newClipData) { // simply push to sequence obj and update id and starttime
+    let newLayerData = sequence[newLayerIdx];
+    newClipData.id = `${newLayerIdx}-${newLayerData.length}`;
+    newClipData.startTime = getLayerLength(newLayerIdx);
+    newLayerData.push(newClipData);
 }
 
 function updateSequenceMarkerPosition() { 
@@ -1004,15 +977,14 @@ document.getElementById("viewportScale").addEventListener("input", function(e) {
 document.getElementById("clipLayerSelection").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         let parts = selectedSequenceItem.id.split("-");
-        let layerIdx = parts[0];
-        let clipIdx = +(selectedSequenceItem.id.split("-")[1]);
-        console.warn(sequence[selectedSequenceItem.clipLayer - 1])
-        let removed = sequence[selectedSequenceItem.clipLayer - 1].splice(clipIdx, 1);
-        selectedSequenceItem.clipLayer = +(event.target.value);
-        sequence[+(event.target.value) - 1].push(removed[0]);
+        let layerIdx = +(parts[0]);
+        let clipIdx = +(parts[1]);
+        console.warn(e);
+        console.warn(e.target.value);
+        selectedSequenceItem.clipLayer = +(e.target.value);
         clearAllClipLayers();
-        updateLayerStartTimes(layerIdx, clipIdx, -selectedSequenceItem.length); // once for old layer
-        updateLayerStartTimes(+(event.target.value), clipIdx, selectedSequenceItem.length); // again for new layer
+        let removed = removeClipFromLayer(layerIdx, clipIdx);
+        appendClipToLayer(+(e.target.value) - 1, removed);
         updateTimeline();
     }
 });
