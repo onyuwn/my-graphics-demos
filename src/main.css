@@ -161,6 +161,28 @@ h1 {
     grid-column: 2 / 6;
 }
 
+@media (max-width:800px) {
+    #root {
+        display: grid;
+        grid-template-columns:1fr; 
+        grid-template-rows:1fr 1fr; 
+        max-height: calc(100% - 185px);
+        min-height: 400px;
+        width: 100%;
+    }
+
+    #sidebar {
+        grid-row: 2;
+        margin: 0 !important;
+        height: 300px !important;
+    }
+
+    #contentRoot {
+        grid-row:1;
+        grid-column: 1;
+    }
+}
+
 #sidebar {
     font-family: "chalkabout";
     grid-column: 1;

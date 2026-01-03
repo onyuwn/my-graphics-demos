@@ -491,8 +491,8 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
         let frontSizeControl = document.createElement("div");
         sizeControl.className = "lengthController";
         sizeControl.id = `${newSequenceItem.id}-lengthController`;
-        sizeControl.addEventListener("mousedown", startClipAdjustment);
-        nameThumbnailContainer.addEventListener("mousedown", startClipPositionAdjustment);
+        sizeControl.addEventListener("pointerdown", startClipAdjustment);
+        nameThumbnailContainer.addEventListener("pointerdown", startClipPositionAdjustment);
         let sequenceItemIdx = +(sequenceItem.id.split("-")[1]);
         newSequenceItem.style.gridColumn = sequenceItemIdx + 1;
         newSequenceItem.appendChild(sizeControl);
@@ -611,7 +611,7 @@ function insertGap(layerIdx, clipIdx) { // clip to insert gap before
     updateLayer(layerIdx);
 }
 
-document.addEventListener("mousemove", function(e) {
+document.addEventListener("pointermove", function(e) {
     let curX = e.clientX;
     if(resizingClip == true && curSelectedClipForResize && e.target.id.includes("-") && e.target.id.split("-").length == 3) {
         let parts = curSelectedClipForResize.id.split("-");
@@ -662,7 +662,7 @@ document.addEventListener("mousemove", function(e) {
     }
 });
 
-document.addEventListener("mouseup", function(e) {
+document.addEventListener("pointerup", function(e) {
     if(curSelectedClipForResize) {
         console.warn("completing resize");
         resizingClip = false;
@@ -938,6 +938,9 @@ document.getElementById("transitionSelectionInput").addEventListener("change", u
 document.getElementById("clipLengthInput").addEventListener("change", function(e) {
     console.warn("updating length");
     updateClipLength(+(e.target.value));
+    if(selectedSequenceItem) {
+        updateLayer(selectedSequenceItem.clipLayer - 1);
+    }
 })
 
 document.getElementById("exportButton").addEventListener("click", function(e) {
