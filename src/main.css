@@ -174,7 +174,12 @@ h1 {
     #sidebar {
         grid-row: 2;
         margin: 0 !important;
-        height: 300px !important;
+        height: 1200px !important;
+        flex-grow: 1;
+    }
+
+    .sequencerLibrary {
+        max-height: none;
     }
 
     #contentRoot {
@@ -276,12 +281,10 @@ h1 {
 
 #assetList, #mainSequenceControls {
     margin-top:5px;
-    min-height: 200px;
     background-image:url('/kitchenfloor2.png');
     border: 2px solid rgb(169, 78, 255);
     box-shadow: inset -1px -3px 3px 3px rgb(52, 0, 0);
     padding: 5px;
-    max-height: 400px;
     overflow: auto;
     scrollbar-color: rgb(255, 0, 0) #00ff84;
 }
@@ -289,7 +292,6 @@ h1 {
 #sequenceItemInspect {
     margin-top:5px;
     margin-bottom:5px;
-    min-height: 200px;
     background-image:url('/kitchenfloor2.png');
     border: 2px solid rgb(169, 78, 255);
     box-shadow: inset  -2px -1px 5px 3px rgb(52, 0, 0);

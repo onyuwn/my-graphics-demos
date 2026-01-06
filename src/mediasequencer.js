@@ -422,16 +422,52 @@ function addItemToSequence(file, texture, imgData, layer) {
 }
 
 function updateLayer(layerIdx) { // rebuild layer based on sequence data
-    let curLayer = sequence[layerIdx];
     clearClipLayer(layerIdx + 1);
     let curClipLayerElement = document.getElementById(`clipLayer${layerIdx+1}`);
-    let clipWidths = curLayer.map(x=>x.length * pixelsPerSecond);
-    curClipLayerElement.style.gridTemplateColumns = clipWidths.join("px ") + "px";
+    let curLayer = sequence[layerIdx];
+
+    for(let i = 0; i < curLayer.length; i++) {
+        let curClip = sequence[layerIdx][i];
+        let prevClip = sequence[layerIdx][i-1]; 
+        // if gap should exist, add it to the sequence (increasing start time from ui)
+        if(prevClip && prevClip.clipType != "gap" && prevClip.startTime + prevClip.length < curClip.startTime) {
+            let diff = curClip.startTime - (prevClip.startTime + prevClip.length);
+            insertGap(layerIdx, i, diff);
+        } else if (prevClip && prevClip.clipType != "gap" && prevClip.startTime + prevClip.length != curClip.startTime) { // update gap
+            //prevClip.length = curClip.startTime - (prevClip.startTime + prevClip.length);
+        } else if(!prevClip && curClip.startTime > 0) {
+            insertGap(layerIdx, i, curClip.startTime);
+        }
+    }
+
     for(let i = 0; i < curLayer.length; i++) {
         let curClip = sequence[layerIdx][i];
         // update grid template string in style
         createNewSequenceItem(curClip);
     }
+
+    curLayer = sequence[layerIdx];
+    let clipWidths = curLayer.map(x=>x.length * pixelsPerSecond);
+    console.warn(clipWidths);
+    curClipLayerElement.style.gridTemplateColumns = clipWidths.join("px ") + "px";
+}
+
+function createNewGap(length, startTime, layerIdx, clipIdx) {
+    let newGap = {
+        name:"gap",
+        startTime:curClip.startTime,
+        length:.01,
+        id:`${layerIdx}-${clipIdx}`,
+        transitionType: 0,
+        transitionTime: defaultTransitionTime,
+        clipLayer: layerIdx + 1,
+        clipEffect: 0,
+        fadeInTransitionType: 0,
+        fadeInTransitionTime: 0,
+        clipType: "gap" // can be image or gap
+    }
+
+    return newGap;
 }
 
 function updateTimeline() { // rebuilds timeline from sequence data
@@ -491,8 +527,10 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
         let frontSizeControl = document.createElement("div");
         sizeControl.className = "lengthController";
         sizeControl.id = `${newSequenceItem.id}-lengthController`;
+        sizeControl.addEventListener("touchstart", (e)=>e.preventDefault());
         sizeControl.addEventListener("pointerdown", startClipAdjustment);
         nameThumbnailContainer.addEventListener("pointerdown", startClipPositionAdjustment);
+        nameThumbnailContainer.addEventListener("touchstart", (e)=>e.preventDefault());
         let sequenceItemIdx = +(sequenceItem.id.split("-")[1]);
         newSequenceItem.style.gridColumn = sequenceItemIdx + 1;
         newSequenceItem.appendChild(sizeControl);
@@ -580,19 +618,19 @@ function startClipPositionAdjustment(e) {
         let curGridStr = curClipLayer.style.gridTemplateColumns;
         let gridParts = curGridStr.split(" ");
         initialGapWidth = +(gridParts[curSelectedClipIdx - 1].replace("px", ""));
-        lastClipEndTime = prevClip.length + prevClip.startTime;
+        lastClipEndTime = prevClip.length + prevClip.startTime; // get prev clip exclude gaps
     }
     initialClipStartTime = curClip.startTime;
     console.warn(`initial clip start: ${initialClipStartTime}`);
     console.warn(`initial gap width: ${initialGapWidth}`);
 }
 
-function insertGap(layerIdx, clipIdx) { // clip to insert gap before
+function insertGap(layerIdx, clipIdx, gapLength = .01) { // clip to insert gap before
     let curClip = sequence[layerIdx][clipIdx];
     let newGap = {
         name:"gap",
-        startTime:curClip.startTime,
-        length:.01,
+        startTime:gapLength != .01 ? curClip.startTime - gapLength : curClip.startTime,
+        length:gapLength,
         id:`${layerIdx}-${clipIdx}`,
         transitionType: 0,
         transitionTime: defaultTransitionTime,
@@ -605,10 +643,15 @@ function insertGap(layerIdx, clipIdx) { // clip to insert gap before
     sequence[layerIdx].splice(clipIdx, 0, newGap);
     // update all ids and start times of clips after
     for(let i = clipIdx + 1; i < sequence[layerIdx].length; i++) {
-        sequence[layerIdx][i].startTime+=.01;
+        if(i != clipIdx + 1) {
+            sequence[layerIdx][i].startTime+=gapLength;
+        }
         sequence[layerIdx][i].id = `${layerIdx}-${i}`;
     }
-    updateLayer(layerIdx);
+
+    if(gapLength == .01) {
+        updateLayer(layerIdx);
+    }
 }
 
 document.addEventListener("pointermove", function(e) {
@@ -959,7 +1002,6 @@ document.getElementById("removeClipButton").addEventListener("click", function(e
     selectedSequenceItem = undefined;
     clearClipLayer(1);
     updateTimeline();
-    refreshAllStartTimes();
     requestedCaptureFrames = frameRate * getTotalSequenceLength();
 });
 
