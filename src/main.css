@@ -283,6 +283,15 @@ h1 {
     .value {
         font-size: 35px !important;
     }
+
+    #starsheader {
+        transform: scale(1);
+        width:200px;
+    }
+
+    .helpPopup {
+        width: 70%;
+    }
 }
 
 #sidebar {

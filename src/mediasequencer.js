@@ -1150,6 +1150,8 @@ function closeTimelineHelpPopup() {
 function openAddImageHelpPopup() {
     document.getElementById("helpPopup2").style.display = "block";
     document.getElementById("popupGlass").style.display = "block";
+    document.getElementById("helpPopup2").style.top = `calc(${window.scrollY}px + 50%)`;
+    document.getElementById("popupGlass").style.top = `calc(${window.scrollY}px + 50%)`;
 }
 
 function closeAddImageHelpPopup() {
@@ -1160,6 +1162,8 @@ function closeAddImageHelpPopup() {
 function openClipSettingsHelpPopup() {
     document.getElementById("helpPopup3").style.display = "block";
     document.getElementById("popupGlass").style.display = "block";
+    document.getElementById("helpPopup3").style.top = `calc(${window.scrollY}px + 50%)`;
+    document.getElementById("popupGlass").style.top = `calc(${window.scrollY}px + 50%)`;
 }
 
 function closeClipSettingsHelpPopup() {
@@ -1170,6 +1174,9 @@ function closeClipSettingsHelpPopup() {
 function openRenderSettingsHelpPopup() {
     document.getElementById("helpPopup4").style.display = "block";
     document.getElementById("popupGlass").style.display = "block";
+    console.warn(window.scrollTop);
+    document.getElementById("helpPopup4").style.top = `calc(${window.scrollY}px + 50%)`;
+    document.getElementById("popupGlass").style.top = `calc(${window.scrollY}px + 50%)`;
 }
 
 
