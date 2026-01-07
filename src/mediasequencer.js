@@ -433,8 +433,8 @@ function updateLayer(layerIdx) { // rebuild layer based on sequence data
         if(prevClip && prevClip.clipType != "gap" && prevClip.startTime + prevClip.length < curClip.startTime) {
             let diff = curClip.startTime - (prevClip.startTime + prevClip.length);
             insertGap(layerIdx, i, diff);
-        } else if (prevClip && prevClip.clipType != "gap" && prevClip.startTime + prevClip.length != curClip.startTime) { // update gap
-            //prevClip.length = curClip.startTime - (prevClip.startTime + prevClip.length);
+        } else if (prevClip && prevClip.clipType == "gap" && prevClip.startTime + prevClip.length > curClip.startTime) { // update gap
+            prevClip.length = curClip.startTime - prevClip.startTime
         } else if(!prevClip && curClip.startTime > 0) {
             insertGap(layerIdx, i, curClip.startTime);
         }
@@ -494,7 +494,7 @@ function updateSequenceTimelineRuler() {
     for(let i = 0; i<ticks; i++) {
         let tickMarkElement = document.createElement("div");
         tickMarkElement.className = "sequenceTimelineRulerTick"; 
-        tickMarkElement.style.left = (i+1)*pixelsPerSecond;
+        tickMarkElement.style.left = (i*pixelsPerSecond)+10;
 
         if(i % 5 == 0) {
             let tickLabel = document.createElement("p");
@@ -514,7 +514,7 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
         let sequenceThumbnail = document.createElement("img")
         let sequenceItemName = document.createElement("p");
         newSequenceItem.className = "sequenceItemPlaceholder";
-        newSequenceItem.style.background = `linear-gradient(to right, rgb(169, 78, 255) ${((sequenceItem.length - sequenceItem.transitionTime) / sequenceItem.length) * 100}%, rgb(41, 0, 79))`;
+        newSequenceItem.style.background = `linear-gradient(to right, rgb(0, 255, 13) ${((sequenceItem.length - sequenceItem.transitionTime) / sequenceItem.length) * 100}%, rgb(41, 0, 79))`;
         sequenceItemName.innerHTML = sequenceItem.name;
         sequenceItemName.className = "sequenceItemName";
         sequenceThumbnail.className = "sequenceThumbnail";
@@ -573,6 +573,7 @@ let newGap = false; // track if gap was added during move.. cur selected is dest
 let lastClipEndTime = -1;
 let resizeStart = 0.0;
 let moveStart = 0.0;
+let secondsMoved = 0.0;
 let gapsBeforeAdjustment = 0;
 let initialGapWidth = 0;
 let initialClipStartTime = 0.0;
@@ -676,7 +677,7 @@ document.addEventListener("pointermove", function(e) {
         }
 
         let curClip = sequence[clipLayerIdx][curSelectedClipIdx];
-        let secondsMoved = ((curX - moveStart) / pixelsPerSecond);
+        secondsMoved = ((curX - moveStart) / pixelsPerSecond);
         let prevClip = sequence[clipLayerIdx][curSelectedClipIdx - 1];
         console.warn(secondsMoved);
         if(sequence[clipLayerIdx].length >= 1 && secondsMoved > 0 && secondsMoved + initialClipStartTime > lastClipEndTime) {
@@ -716,7 +717,10 @@ document.addEventListener("pointerup", function(e) {
         movingClip = false;
         gapInserted = false;
         newGap = false;
+        let parts = selectedSequenceItem.id.split("-");
+        updateLayerStartTimes(selectedSequenceItem.clipLayer - 1, parts[1], secondsMoved);
         curSelectedClipForMove = undefined;
+        secondsMoved = 0;
         lastClipEndTime = -1;
         console.warn("MOVE COMPLETE");
     }
@@ -830,6 +834,8 @@ function updateSequenceInspectAttributes(sequenceItem) {
     updateTransitionLengthInputValue(sequenceItem.transitionTime);
     updateClipStartTimeInputValue(sequenceItem.startTime);
     updateClipLayerInputValue(sequenceItem.clipLayer);
+    updateFadeInTypeInputValue(sequenceItem.fadeInTransitionType);
+    updateFadeInTimeInputValue(sequenceItem.fadeInTransitionTime);
 }
 
 function updateClipNameLabel(name) {
@@ -863,7 +869,16 @@ function updateClipLength(length) {
     updateLayerStartTimes(selectedSequenceItem.clipLayer - 1, clipIdx, delta);
 }
 
+function updateFadeInTimeInputValue(fadeInTime) {
+    document.getElementById("fadeInLengthInput").value = fadeInTime;
+}
+
+function updateFadeInTypeInputValue(fadeInType) {
+    document.getElementById("fadeInSelectionInput").value = fadeInType;
+}
+
 function updateLayerStartTimes(layer, clipIdx, delta) { // used for when clips move layers
+    console.warn(`updating start times on ${layer}`);
     let curLayer = sequence[layer];
     if(curLayer.length > 0) {
         for(let i = 0; i < curLayer.length; i++) {
@@ -1059,6 +1074,24 @@ document.getElementById("fadeInLengthInput").addEventListener("change", function
         selectedSequenceItem.fadeInTransitionTime = +(e.target.value)
     }
 });
+
+document.getElementById("timelineHelpButton").addEventListener("click", function(e) {
+    openTimelineHelpPopup();
+});
+
+document.getElementById("closePopup1Button")?.addEventListener("click", function(e) {
+    closeTimelineHelpPopup();
+});
+
+function openTimelineHelpPopup() {
+    document.getElementById("helpPopup1").style.display = "block";
+    document.getElementById("popupGlass").style.display = "block";
+}
+
+function closeTimelineHelpPopup() {
+    document.getElementById("helpPopup1").style.display = "none";
+    document.getElementById("popupGlass").style.display = "none";
+}
 
 function clearAllClipLayers() {
     for(let i = 1; i < 5; i++) {

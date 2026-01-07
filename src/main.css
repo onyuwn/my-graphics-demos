@@ -3,6 +3,10 @@ body {
     margin: 0 !important;
 }
 
+#sequenceItemInput {
+    display: none;
+}
+
 h1 {
     font-size: 64px;
     color: yellow;
@@ -24,13 +28,20 @@ h1 {
     margin-bottom: 0;
 }
 
-#header a, button {
+#header a, button, .controlButton {
     font-size: 32px;
     background-color: yellow;
     box-shadow: inset -1px -3px 3px 3px red;
     padding:5px;
     cursor: pointer;
     font-family: 'angelicpeace';
+    color:black;
+    text-align: center;
+}
+
+.controlButton:hover {
+    background-color: rgb(0, 255, 13);
+    box-shadow: inset -1px -3px 3px 3px rgb(0, 168, 62);
 }
 
 @font-face {
@@ -61,7 +72,7 @@ h1 {
 .miniPost {
     font-family: "angelicpeace";
     border:30px solid white;
-    background-color: rgb(0, 255, 187);
+    background-image:url("/chalkboard.png");
     border-image: url("/woodborder.png")150;
     border-image-width: 30px;
     /* //padding: 30px; */
@@ -101,8 +112,8 @@ h1 {
     grid-template-rows: 3fr auto auto;
     width: 75%;
     height: 600px;
-    background-image: url('/greenapple.jpg') !important;
-    background-size: cover;
+    background-image: url("/my-graphics-demos/uipamnel1.png") !important;
+    /* background-size: cover; */
 }
 
 #viewportContainer {
@@ -117,8 +128,57 @@ h1 {
     align-items: center;
     justify-content: center;
     background-image: url("/my-graphics-demos/uipamnel1.png");
-    background-size: 100% 100%;
+    background-size: 50% 100%;
+    max-height: 500px;
+    overflow: auto;
     /*background:radial-gradient(circle at center, rgb(169, 78, 255) 70%, transparent 30%), url('/uipamnel1.png') 100% center / cover;*/
+}
+
+#viewport canvas {
+    border-image: url("/woodborder.png") 30;
+    border-image-width: 30px;
+    padding: 25px;
+}
+
+.helpPopup {
+    font-family: "angelicpeace";
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    background-image:url("/chalkboard.png");
+    width: 25vw;
+    height: 500px;
+    display: none;
+    z-index: 10;
+    border-image: url("/woodborder.png") 30;
+    border-image-width: 30px;
+    padding: 25px;
+    overflow-y:auto;
+}
+
+.helpPopup p {
+    font-size: 24px;
+    color:white;
+}
+
+.popupHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#popupGlass {
+    display: none;
+    content: "";
+    background: rgba(1,1,1,.25);
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    width: 100vw;
+    height: 100vh;
+    z-index: 9;
 }
 
 #sequencerControls {
@@ -249,23 +309,30 @@ h1 {
     position:absolute;
     width: 4px;
     height: 10px;
-    background-color: rgb(0, 30, 255) !important;
+    background-color: rgb(255, 0, 0) !important;
     box-shadow: 1px 1px 1px 1px black !important;
     border: 0 in !important;
-    z-index: 4;
+    z-index: 5;
 }
 
-#sequencerTimeline>:nth-child(odd):not(:nth-child(0)) {
-    border-top:2px solid rgb(169, 78, 255);
-    background-color: rgb(0, 255, 26);
-    box-shadow: inset 0px 0px 5px 5px rgb(0, 183, 134);
+.sequenceTimelineRulerTick p {
+    font-size: 16px;
+    color: yellow;
+    text-shadow:black 2px 2px;
 }
 
-#sequencerTimeline >:nth-child(even) {
-    box-shadow: inset 0px 0px 5px 5px rgb(0, 185, 185);
+#sequencerTimeline>:nth-child(odd) {
     border-top:2px solid rgb(169, 78, 255);
-    
-    background-color: rgb(25, 0, 255);
+    /* background-color: rgb(0, 255, 26); */
+    background-image: url("/my-graphics-demos/uipamnel1.png");
+    background-size: 50% 100%;
+    /* box-shadow: inset 0px 0px 5px 5px rgb(161, 161, 161); */
+}
+
+#sequencerTimeline>:nth-child(even):not(:nth-child(2)) {
+    /* box-shadow: inset 0px 0px 5px 5px rgb(131, 131, 131); */
+    border-top:2px solid rgb(169, 78, 255);
+    background-image:url("/ceiling1.png");
 }
 
 .lengthController {
@@ -286,7 +353,7 @@ h1 {
     box-shadow: inset -1px -3px 3px 3px rgb(52, 0, 0);
     padding: 5px;
     overflow: auto;
-    scrollbar-color: rgb(255, 0, 0) #00ff84;
+    /* scrollbar-color: rgb(255, 0, 0) #00ff84; */
 }
 
 #sequenceItemInspect {
