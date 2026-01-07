@@ -26,17 +26,26 @@
             <script type="module" src="src/drawscene.js"></script>
             <script type="module" src="src/mediasequencer.js"></script>
             <div id="sidebar" class="sequencerLibrary">
-                <label for="sequenceItemInput" class="controlButton">
-                    Add Image
-                </label>
-                <input id="sequenceItemInput" type="file"/>
+                <div style="display: flex;justify-content: space-between;">
+                    <label for="sequenceItemInput" class="controlButton" style="flex-grow: 1;">
+                        Add Image
+                    </label>
+                    <a 
+                        style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;color:yellow;"
+                        class="controlButton2"
+                        id="addImageHelpButton">?</a>
+                    <input id="sequenceItemInput" type="file"/>
+                </div>
                 <div id="assetList">
                     <h3>Library</h3>
                 </div>
                 <div id="sequenceItemInspect">
-                    <div style="display:flex;justify-content: space-between;align-items: center;">
+                    <div class="sequenceInfoItem" style="justify-content: space-between !important;align-items: center;">
                         <h3>Clip Settings</h3>
-                        <a style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;" class="controlButton2">?</a>
+                        <a 
+                            style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;"
+                            class="controlButton2"
+                            id="clipSettingsHelpButton">?</a>
                     </div>
                     <!-- <p></p> -->
                     <div class="sequenceInfoItem">
@@ -51,6 +60,16 @@
                         <p>Clip Length</p>
                         <input id="clipLengthInput" type="number" />
                     </div>
+                    <div class="sequenceInfoItem">
+                        <p>Clip Layer</p>
+                        <select id="clipLayerSelection">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <button id="removeClipButton" class="controlButton">remove clip</button>
                     <div class="sequenceInfoItem">
                         <p>Fade in</p>
                         <select id="fadeInSelectionInput">
@@ -99,28 +118,20 @@
                         <input id="clipWidthInput" type="number" />
                         <input id="clipHeightInput" type="number" />
                     </div> -->
-                    <div class="sequenceInfoItem">
-                        <p>Clip Layer</p>
-                        <select id="clipLayerSelection">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                        </select>
-                    </div>
-                    <button id="removeClipButton" class="controlButton">remove clip</button>
                 </div>
                 <div id="mainSequenceControls">
-                    <div style="display:flex;justify-content: space-between;align-items: center;">
+                    <div class="renderSettingsItem" style="display:flex;justify-content: space-between;align-items: center;">
                         <h3>Render Settings</h3>
-                        <a style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;" class="controlButton2">?</a>
+                        <a style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;"
+                           class="controlButton2"
+                           id="renderSettingsHelpButton">?</a>
                     </div>
-                    <div class="renderSettingsItem">
+                    <!-- <div class="renderSettingsItem">
                         <p>Output Type</p>
                         <select>
                             <option value="1">GIF</option>
                         </select>
-                    </div>
+                    </div> -->
                     <div class="renderSettingsItem">
                         <p>Output Dimensions</p>
                         <div style="display:flex">
@@ -170,7 +181,7 @@
         </div>
         <div id="helpPopup1" class="helpPopup">
             <div class="popupHeader">
-                <h1>Timeline Help</h1>
+                <h1>Sequence Timeline</h1>
                 <a id="closePopup1Button" class="controlButton">X</a>
             </div>
             <p>
@@ -183,6 +194,48 @@
                 will then be exposed in the left sidebar. There you can have more exact control of the start time and length values. But more
                 importantly, from the sidebar, you will be able to add effects and move the clips to different layers. More information on those
                 effects will be available in the side bar.
+            </p>
+            <p>
+                <strong>KNOWN I S S U E S</strong>(known issues)
+                <ol>
+                    <li>You can't click and drag to move clips backward. However the start time can be decreased in the left panel.</li>
+                    <li>Increasing the start time from the left panel (instead of clicking and dragging to the right) will increase the start time but may not visually increase the gap between clips</li>
+                </ol>
+            </p>
+            <p>
+                This certainly works better on a computer!! but all functions are still available on mobile. just clunky and less fun.
+            </p>
+        </div>
+        <div id="helpPopup2" class="helpPopup">
+            <div class="popupHeader">
+                <h1>Adding Images</h1>
+                <a id="closePopup2Button" class="controlButton">X</a>
+            </div>
+            <p>
+                Click ADD IMAGE to add an image to the timeline that will be reffered to as a <strong>CLIP</strong>. By default that image will go to the end of layer one. You can
+                change that using the options in the section below.
+            </p>
+        </div>
+        <div id="helpPopup3" class="helpPopup">
+            <div class="popupHeader">
+                <h1>Clip Settings</h1>
+                <a id="closePopup3Button" class="controlButton">X</a>
+            </div>
+            <p>
+                Once you have selected a clip in the timeline (click on it and it will turn yellow) its properties will update
+                in this section.Here you can manually edit the clip's start/end time, move it to another layer,
+                remove it from the sequence, and add effects and transitions.
+            </p>
+        </div>
+        <div id="helpPopup4" class="helpPopup">
+            <div class="popupHeader">
+                <h1>Render/Export Settings</h1>
+                <a id="closePopup4Button" class="controlButton">X</a>
+            </div>
+            <p>
+                Here you can adjust the settings of the output. Right now the sequencer can only export gifs, but planning
+                on adding mp4 export in the near future. The dimensions and fps settings are experimental also... not sure
+                if that will do what you expect. Not really sure if I plan on supporting higher resolutions.
             </p>
         </div>
         <div id="popupGlass"></div>

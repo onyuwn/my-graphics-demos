@@ -265,7 +265,7 @@ function main() {
                          id: "0-0",
                          transitionType: 1, transitionTime: 1.0, clipLayer: 1,
                          fadeInTransitionType: 0,
-                         fadeInTransitionTime: 0,
+                         fadeInTransitionTime: 1,
                          clipType:"image"});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -399,7 +399,7 @@ function addItemToSequence(file, texture, imgData, layer) {
         clipLayer: layer + 1,
         clipEffect: 0,
         fadeInTransitionType: 0,
-        fadeInTransitionTime: 0,
+        fadeInTransitionTime: 1,
         clipType: "image" // can be image or gap
     };
 
@@ -435,6 +435,11 @@ function updateLayer(layerIdx) { // rebuild layer based on sequence data
             insertGap(layerIdx, i, diff);
         } else if (prevClip && prevClip.clipType == "gap" && prevClip.startTime + prevClip.length > curClip.startTime) { // update gap
             prevClip.length = curClip.startTime - prevClip.startTime
+        //} else if(prevClip && prevClip.clipType == "gap" && prevClip.startTime + prevClip.length < curClip.startTime) { // update gap
+        //     let clipBeforeLast = sequence[layerIdx][i-2];
+        //     if(clipBeforeLast) {
+        //         prevClip.length = curClip.startTime - (clipBeforeLast.startTime + clipBeforeLast.length);
+        //     }
         } else if(!prevClip && curClip.startTime > 0) {
             insertGap(layerIdx, i, curClip.startTime);
         }
@@ -667,6 +672,7 @@ document.addEventListener("pointermove", function(e) {
         let newClipLength = newSize/pixelsPerSecond;
         updateClipLength(newClipLength); // wait if there are clips after we need to update their start times....
         updateClipLengthInputValue(newClipLength);
+        //updateLayerStartTimes(layerId, clipId, newClipLength);
         updateLayer(layerId);
     } else if(movingClip && curSelectedClipForMove) {
         let curSelectedClipIdx = +(curSelectedClipForMove.id.split("-")[1]);
@@ -1107,6 +1113,30 @@ document.getElementById("closePopup1Button")?.addEventListener("click", function
     closeTimelineHelpPopup();
 });
 
+document.getElementById("addImageHelpButton").addEventListener("click", function(e) {
+    openAddImageHelpPopup();
+});
+
+document.getElementById("closePopup2Button")?.addEventListener("click", function(e) {
+    closeAddImageHelpPopup();
+});
+
+document.getElementById("clipSettingsHelpButton").addEventListener("click", function(e) {
+    openClipSettingsHelpPopup();
+});
+
+document.getElementById("closePopup3Button")?.addEventListener("click", function(e) {
+    closeClipSettingsHelpPopup();
+});
+
+document.getElementById("renderSettingsHelpButton").addEventListener("click", function(e) {
+    openRenderSettingsHelpPopup();
+});
+
+document.getElementById("closePopup4Button")?.addEventListener("click", function(e) {
+    closeRenderSettingsHelpPopup();
+});
+
 function openTimelineHelpPopup() {
     document.getElementById("helpPopup1").style.display = "block";
     document.getElementById("popupGlass").style.display = "block";
@@ -1114,6 +1144,37 @@ function openTimelineHelpPopup() {
 
 function closeTimelineHelpPopup() {
     document.getElementById("helpPopup1").style.display = "none";
+    document.getElementById("popupGlass").style.display = "none";
+}
+
+function openAddImageHelpPopup() {
+    document.getElementById("helpPopup2").style.display = "block";
+    document.getElementById("popupGlass").style.display = "block";
+}
+
+function closeAddImageHelpPopup() {
+    document.getElementById("helpPopup2").style.display = "none";
+    document.getElementById("popupGlass").style.display = "none";
+}
+
+function openClipSettingsHelpPopup() {
+    document.getElementById("helpPopup3").style.display = "block";
+    document.getElementById("popupGlass").style.display = "block";
+}
+
+function closeClipSettingsHelpPopup() {
+    document.getElementById("helpPopup3").style.display = "none";
+    document.getElementById("popupGlass").style.display = "none";
+}
+
+function openRenderSettingsHelpPopup() {
+    document.getElementById("helpPopup4").style.display = "block";
+    document.getElementById("popupGlass").style.display = "block";
+}
+
+
+function closeRenderSettingsHelpPopup() {
+    document.getElementById("helpPopup4").style.display = "none";
     document.getElementById("popupGlass").style.display = "none";
 }
 

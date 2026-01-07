@@ -54,6 +54,11 @@ h1 {
     box-shadow: inset -1px -3px 3px 3px rgb(0, 168, 62);
 }
 
+.controlButton2:hover {
+    background-color: rgb(0, 255, 13);
+    box-shadow: inset -1px -3px 3px 3px rgb(0, 168, 62);
+}
+
 @font-face {
     font-family: "angelicpeace";
     src: url("/Angelic Peace.ttf");
@@ -407,9 +412,11 @@ h1 {
     color:rgb(169, 78, 255) !important;
 }
 
-.sequenceInfoItem {
+.sequenceInfoItem, .renderSettingsItem {
     display: flex;
     justify-content: space-between;
+    color:yellow;
+    text-shadow: 2px 2px black;
 }
 
 input[type="number"] {
