@@ -8,9 +8,9 @@
             defer>
         </script>
         <meta content="width=device-width, initial-scale=1" name="viewport" />
-      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-tswMpDx0.js"></script>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-C0eMV9gI.js"></script>
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
-      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-CGPcXzgb.css">
+      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-DGrI99uF.css">
     </head>
     <body>
         <div id="header">
@@ -25,6 +25,9 @@
         </div>
         <div id="root">
             <div id="sidebar" class="sequencerLibrary">
+                <label for="sequenceItemInput" class="controlButton">
+                    Add Image
+                </label>
                 <input id="sequenceItemInput" type="file"/>
                 <div id="assetList">
                     <h3>Library</h3>
@@ -87,11 +90,11 @@
                         <p>Transition Length</p>
                         <input id="transitionLengthInput" type="number" />
                     </div>
-                    <div class="sequenceInfoItem">
+                    <!-- <div class="sequenceInfoItem">
                         <p>Size</p>
                         <input id="clipWidthInput" type="number" />
                         <input id="clipHeightInput" type="number" />
-                    </div>
+                    </div> -->
                     <div class="sequenceInfoItem">
                         <p>Clip Layer</p>
                         <select id="clipLayerSelection">
@@ -101,7 +104,7 @@
                             <option value="4">4</option>
                         </select>
                     </div>
-                    <button id="removeClipButton">remove clip</button>
+                    <button id="removeClipButton" class="controlButton">remove clip</button>
                 </div>
                 <div id="mainSequenceControls">
                     <h3>Render Settings</h3>
@@ -122,7 +125,7 @@
                         <p>FPS</p>
                         <input id="frameRateInput" value="15" type="number"/>
                     </div>
-                    <button id="exportButton">export</button>
+                    <button id="exportButton" class="controlButton">export</button>
                 </div>
             </div>
             <div id="contentRoot">
@@ -154,8 +157,27 @@
                     <div class="clipLayer" id="clipLayer2"></div>
                     <div class="clipLayer" id="clipLayer1"></div>
                     <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
+                    <button id="timelineHelpButton" class="controlButton" style="height: 50px;font-size: 24px;color:yellow;">Help</button>
                 </div>
             </div>
         </div>
+        <div id="helpPopup1" class="helpPopup">
+            <div class="popupHeader">
+                <h1>Timeline Help</h1>
+                <a id="closePopup1Button" class="controlButton">X</a>
+            </div>
+            <p>
+                This is the sequence timeline. Here you can quickly view how your images are sequenced. You can move them around by dragging
+                on the name of the clip. The clip length can be increased by clicking and dragging on the right side of the dashed line. These
+                values are referred to as the clip start time and clip length respectively.
+            </p>
+            <p>
+                By simply clicking on the name of a clip, it will turn yellow indicating that clip is selected for editing. The clips properties
+                will then be exposed in the left sidebar. There you can have more exact control of the start time and length values. But more
+                importantly, from the sidebar, you will be able to add effects and move the clips to different layers. More information on those
+                effects will be available in the side bar.
+            </p>
+        </div>
+        <div id="popupGlass"></div>
     </body>
 </html>
