@@ -358,7 +358,7 @@ function getTotalSequenceLength() { // update to return longest layer
         let length = 0;
         if(sequence[i].length > 0) {
             for(let j = 0; j < sequence[i].length; j++) { // factor in start time if gaps addeds
-                length = sequence[i][j].startTime + sequence[i][j].length;
+                length += sequence[i][j].length;
             }
             if(length > finalMaxLength) {
                 finalMaxLength = length;
@@ -412,7 +412,7 @@ function addItemToSequence(file, texture, imgData, layer) {
 
     createNewSequenceItem(newItem);
     console.warn(sequence);
-    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
+    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength().toFixed(4);
     requestedCaptureFrames = frameRate * getTotalSequenceLength();
 
     let curLayer = document.getElementById(`clipLayer${newItem.clipLayer}`);
@@ -450,6 +450,7 @@ function updateLayer(layerIdx) { // rebuild layer based on sequence data
     let clipWidths = curLayer.map(x=>x.length * pixelsPerSecond);
     console.warn(clipWidths);
     curClipLayerElement.style.gridTemplateColumns = clipWidths.join("px ") + "px";
+    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength().toFixed(4);
 }
 
 function createNewGap(length, startTime, layerIdx, clipIdx) {
@@ -479,7 +480,6 @@ function updateTimeline() { // rebuilds timeline from sequence data
             updateLayer(i);
         }
     }
-    document.getElementById("sequenceLengthValue").innerHTML = getTotalSequenceLength();
 }
 
 function updateSequenceTimelineRuler() {
@@ -742,6 +742,7 @@ function showTransitionStyleSection(transitionType) {
     let transitionStyleSection = document.getElementById("transitionStyleInputSection");
     if(transitionType==4) {
         let inputLabel = document.createElement("p");
+        inputLabel.id="colorThresholdInputLabel";
         inputLabel.innerHTML = "threshold color"
         let colorPicker = document.createElement("input");
         colorPicker.type="color";
@@ -764,6 +765,15 @@ function hexToRgb(hexStr) {
     let g = parseInt(hexVal.substring(2, 4), 16);
     let b = parseInt(hexVal.substring(4, 6), 16);
     return [r / 255.0, g / 255.0, b / 255.0];
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+  
+function rgbToHex(r, g, b) {
+    return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
 }
 
 function hideTransitionStyleSection() {
@@ -828,14 +838,20 @@ function clearSelection() {
 }
 
 function updateSequenceInspectAttributes(sequenceItem) {
+    document.getElementById("colorThresholdInputLabel")?.remove();
+    document.getElementById("colorThresholdPicker")?.remove();
     updateClipNameLabel(sequenceItem.name);
     updateClipLengthInputValue(sequenceItem.length);
     updateTransitionTypeInputValue(sequenceItem.transitionType);
+    showTransitionStyleSection(sequenceItem.transitionType);
     updateTransitionLengthInputValue(sequenceItem.transitionTime);
     updateClipStartTimeInputValue(sequenceItem.startTime);
     updateClipLayerInputValue(sequenceItem.clipLayer);
     updateFadeInTypeInputValue(sequenceItem.fadeInTransitionType);
     updateFadeInTimeInputValue(sequenceItem.fadeInTransitionTime);
+    if(sequenceItem.colorThreshold) {
+        updateColorThresholdInputValue(sequenceItem.colorThreshold);
+    }
 }
 
 function updateClipNameLabel(name) {
@@ -875,6 +891,14 @@ function updateFadeInTimeInputValue(fadeInTime) {
 
 function updateFadeInTypeInputValue(fadeInType) {
     document.getElementById("fadeInSelectionInput").value = fadeInType;
+}
+
+function updateColorThresholdInputValue(colorValue) {
+    console.warn("updateing");
+    console.warn(colorValue);
+    let hexVal = rgbToHex(Math.round(colorValue[0] * 255), Math.round(colorValue[1] * 255), Math.round(colorValue[2] * 255));
+    console.warn(hexVal);
+    document.getElementById("colorThresholdPicker").value = hexVal;
 }
 
 function updateLayerStartTimes(layer, clipIdx, delta) { // used for when clips move layers

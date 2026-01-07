@@ -39,6 +39,16 @@ h1 {
     text-align: center;
 }
 
+.controlButton2 {
+    background-image: url(/my-graphics-demos/uipamnel1.png);
+    background-size: 50% 100%;
+    box-shadow: inset -1px -3px 3px 3px red;
+    padding: 5px;
+    cursor: pointer;
+    font-family: 'angelicpeace';
+    text-align: center;
+}
+
 .controlButton:hover {
     background-color: rgb(0, 255, 13);
     box-shadow: inset -1px -3px 3px 3px rgb(0, 168, 62);
@@ -147,10 +157,11 @@ h1 {
     left:50%;
     transform: translate(-50%, -50%);
     background-image:url("/chalkboard.png");
-    width: 25vw;
+    width: 40vw;
     height: 500px;
     display: none;
     z-index: 10;
+    border: 30px solid white;
     border-image: url("/woodborder.png") 30;
     border-image-width: 30px;
     padding: 25px;
@@ -245,6 +256,27 @@ h1 {
     #contentRoot {
         grid-row:1;
         grid-column: 1;
+        align-items: flex-start;
+    }
+
+    #header {
+        display: block;
+    }
+
+    #sequencerTimeline {
+        width: calc(100% - 60px);
+    }
+
+    #sequencerRoot {
+        width: calc(100% - 60px);
+    }
+
+    #sidebar {
+        width: calc(100% - 100px);
+    }
+
+    .value {
+        font-size: 35px !important;
     }
 }
 
