@@ -8,7 +8,7 @@
             defer>
         </script>
         <meta content="width=device-width, initial-scale=1" name="viewport" />
-      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-BTd_llu-.js"></script>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-CEejAySW.js"></script>
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
       <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-CtybHVZN.css">
     </head>
@@ -77,7 +77,8 @@
                             <option value="2">DISSOLVE</option>
                             <option value="3">RIPPLE</option>
                             <option value="4">COLOR THRESHOLD</option>
-                            <option value="4">NEW</option>
+                            <option value="5">RETURN FROM HEAVEN</option>
+                            <option value="6">NEW</option>
                         </select>
                     </div>
                     <div class="sequenceInfoItem">
@@ -87,14 +88,15 @@
                     <div class="sequenceInfoItem">
                         <p>Clip Effect</p>
                         <select id="clipEffectInput">
-                            <option value="0">CUT</option>
-                            <option value="1">FADE</option>
-                            <option value="2">DISSOLVE</option>
-                            <option value="3">RIPPLE</option>
-                            <option value="4">COLOR THRESHOLD</option>
-                            <option value="4">NEW</option>
+                            <option value="0">NONE</option>
+                            <option value="1">FLICKER</option>
+                            <option value="2">RIPPLE</option>
+                            <option value="3">SHARPEN</option>
+                            <option value="4">DESATURATE</option>
+                            <option value="5">COLOR THRESHOLD</option>
                         </select>
                     </div>
+                    <!-- add clip effect intensity slider -->
                     <div class="sequenceInfoItem">
                         <p>Fade out</p>
                         <select id="transitionSelectionInput">
@@ -103,7 +105,8 @@
                             <option value="2">DISSOLVE</option>
                             <option value="3">RIPPLE</option>
                             <option value="4">COLOR THRESHOLD</option>
-                            <option value="4">NEW</option>
+                            <option value="5">GO TO HEAVEN</option>
+                            <option value="6">NEW</option>
                         </select>
                     </div>
                     <div class="sequenceInfoItem" id="transitionStyleInputSection">
@@ -176,6 +179,8 @@
                     <div class="clipLayer" id="clipLayer1"></div>
                     <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
                     <button id="timelineHelpButton" class="controlButton" style="height: 50px;font-size: 24px;color:yellow;">Help</button>
+                    <button id="timelineHelpButton" class="controlButton selected" style="height: 50px;font-size: 24px;">Movie</button>
+                    <button id="timelineHelpButton" class="disabled" style="height: 50px;font-size: 24px;">Animation</button>
                 </div>
             </div>
         </div>
