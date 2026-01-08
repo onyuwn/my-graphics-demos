@@ -34,7 +34,7 @@
                         style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;color:yellow;"
                         class="controlButton2"
                         id="addImageHelpButton">?</a>
-                    <input id="sequenceItemInput" type="file"/>
+                    <input id="sequenceItemInput" type="file" accept="image/*, .heif, .heic, image/heif, image/heic"/>
                 </div>
                 <div id="assetList">
                     <h3>Library</h3>
@@ -143,7 +143,6 @@
                         <p>FPS</p>
                         <input id="frameRateInput" value="15" type="number"/>
                     </div>
-                    <button id="exportButton" class="controlButton">export</button>
                 </div>
             </div>
             <div id="contentRoot">
@@ -157,6 +156,8 @@
                     <div id="sequencerControls">
                         <button class="controlButton" id="sequencerStartStop">play</button>
                         <button class="controlButton" id="sequencerRestart">restart</button>
+                        <button id="exportButton" class="controlButton2">export</button>
+                        <a id="downloadButton" class="controlButton2 disabled">download</a>
                     </div>
                     <div id="sequenceTimerContainer">
                         <div id="sequenceTimer">
@@ -237,6 +238,8 @@
                 on adding mp4 export in the near future. The dimensions and fps settings are experimental also... not sure
                 if that will do what you expect. Not really sure if I plan on supporting higher resolutions.
             </p>
+        </div>
+        <div id="errorPopup" class="smallMessage">
         </div>
         <div id="popupGlass"></div>
     </body>

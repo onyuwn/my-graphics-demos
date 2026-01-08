@@ -289,14 +289,50 @@ function main() {
         }
 
     });
+    outGif.on('error', function(error) {
+        let errorPopup = document.getElementById("errorPopup");
+        if(errorPopup) {
+            errorPopup.style.display = 'block';
+            let errorMessage = document.createElement(p);
+            errorMessage.innerHTML = `An error has occured during export ${error.toString()}`;
+            errorPopup.appendChild(errorMessage);
+            setTimeout(() => {
+                errorPopup.innerHTML = "";
+                errorPopup.style.display = 'none';
+            }, 5000)
+        }
+    });
     outGif.on('finished', function(blob) {
-        console.warn("GIFF");
-        window.open(URL.createObjectURL(blob));
+        let url = URL.createObjectURL(blob);
+        let downloadButton = document.getElementById("downloadButton");
+        //window.open(URL.createObjectURL(blob));
+        downloadButton.href = url;
+        downloadButton.download = `jakehsequencer${new Date(Date.now()).toISOString().replace(":","")}.gif`;
+        downloadButton.click();
+        downloadButton.classList.remove("disabled");
         gifRendering = false;
         needCapture = false;
         gifProcessing = false;
         document.getElementById("sequencerStartStop").disabled = false;
         document.getElementById("sequencerRestart").disabled = false;
+        let errorPopup = document.getElementById("errorPopup");
+        if(errorPopup) {
+            errorPopup.style.display = 'block';
+            let successMessage = document.createElement("p");
+            let successMessageHeader = document.createElement("div");
+            let successMessageHeaderText = document.createElement("h1");
+            successMessageHeader.className="popupHeader";
+            successMessageHeaderText.innerHTML = "SUCCESS"
+            successMessage.innerHTML = `Your gif is ready!!! It should have started downloading. If not, click the download button.`;
+            successMessageHeader.appendChild(successMessageHeaderText);
+            errorPopup.appendChild(successMessageHeader);
+            errorPopup.appendChild(successMessage);
+            setTimeout(() => {
+                errorPopup.innerHTML = "";
+                errorPopup.style.display = 'none';
+                document.getElementById("exportProgressBar").remove();
+            }, 5000)
+        }
     });
 
     function render(now) {
@@ -1032,6 +1068,13 @@ document.getElementById("clipLengthInput").addEventListener("change", function(e
 })
 
 document.getElementById("exportButton").addEventListener("click", function(e) {
+    // outGif = new GIF({
+    //     workers: 1,
+    //     quality: 10,
+    //     width:256,
+    //     height:256,
+    //     workerScript: '/my-graphics-demos/gif/gif.worker.js'
+    // });
     exportGif();
 });
 

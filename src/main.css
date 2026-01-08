@@ -28,7 +28,7 @@ h1 {
     margin-bottom: 0;
 }
 
-#header a, button, .controlButton {
+#header a, .controlButton {
     font-size: 32px;
     background-color: yellow;
     box-shadow: inset -1px -3px 3px 3px red;
@@ -40,6 +40,7 @@ h1 {
 }
 
 .controlButton2 {
+    font-size: 32px;
     background-image: url(/my-graphics-demos/uipamnel1.png);
     background-size: 50% 100%;
     box-shadow: inset -1px -3px 3px 3px red;
@@ -47,6 +48,7 @@ h1 {
     cursor: pointer;
     font-family: 'angelicpeace';
     text-align: center;
+    color: yellow;
 }
 
 .controlButton:hover {
@@ -173,7 +175,25 @@ h1 {
     overflow-y:auto;
 }
 
-.helpPopup p {
+.smallMessage {
+    font-family: "angelicpeace";
+    position: absolute;
+    top:7vh;
+    left:calc(100% - 20vw);
+    /* transform: translate(-50%, -50%); */
+    background-image:url("/chalkboard.png");
+    width: 10vw;
+    height: 15vh;
+    display: none;
+    z-index: 10;
+    border: 10px solid white;
+    border-image: url("/woodborder.png") 10;
+    border-image-width: 10px;
+    padding: 10px;
+    overflow-y:auto;
+}
+
+.smallMessage p {
     font-size: 24px;
     color:white;
 }
@@ -415,6 +435,15 @@ h1 {
 .selected {
     background: yellow !important;
     box-shadow: -2px -1px 5px 3px rgb(52, 0, 0) !important;
+}
+
+.disabled {
+    background: white !important;
+    border: 1px solid black !important;
+    font-family: "Times New Roman" !important;
+    box-shadow: none !important;
+    opacity: .5;
+    color:black;
 }
 
 .selected .sequenceItemName {
