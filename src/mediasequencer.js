@@ -34,10 +34,34 @@ const fragmentShaderSource = `
     uniform float fadeInTransitionTime;
     uniform int fadeInTransitionType;
 
+    uniform int clipEffect;
+
     uniform sampler2D uSampler;
 
     vec2 random2( vec2 p ) {
         return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+    }
+
+    vec3 sampleWithOffset(const float x, const float y, vec2 fragCoord) {
+        vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
+        uv = (uv + (uv * vec2(x, y)));
+        return texture2D(uSampler, uv).xyz;
+    }
+
+    vec3 sharpenKernel(vec2 fragCoord)
+    {
+        float offset = 1.0 / 30.0; // yuh
+        vec3 sum = sampleWithOffset(-offset, -offset, fragCoord) * 0.
+                + sampleWithOffset(-offset,  0.0, fragCoord) * -1.
+                + sampleWithOffset(-offset,  offset, fragCoord) * 0.
+                + sampleWithOffset( 0.0, -offset, fragCoord) * -1.
+                + sampleWithOffset( 0.0,  0.0, fragCoord) * 5.0
+                + sampleWithOffset( 0.0,  offset, fragCoord) * -1.
+                + sampleWithOffset( offset, -offset, fragCoord) * 0.0
+                + sampleWithOffset( offset,  0.0, fragCoord) * -1.
+                + sampleWithOffset( offset,  offset, fragCoord) * 0.0;
+        
+        return sum;
     }
 
     void main() {
@@ -72,8 +96,10 @@ const fragmentShaderSource = `
                 } else {
                     gl_FragColor = diffuse;
                 }  
+            } else if(transitionType == 5) {
+                gl_FragColor += (time - transitionStart) / transitionTime;
             }
-        } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0) {
+        } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0 && time <= sequenceItemStartTime + fadeInTransitionTime) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
             if(fadeInTransitionType == 1) {
                 gl_FragColor.a = time / fadeInEnd;
@@ -86,6 +112,38 @@ const fragmentShaderSource = `
                 vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
                 gl_FragColor = texture2D(uSampler,newUv);
                 gl_FragColor.a = (time / fadeInEnd);
+            } else if(fadeInTransitionType == 4) { // erase color increase threshold over time until black
+                vec4 diffuse = texture2D(uSampler,uv);
+                float rDiff = abs(diffuse.r - colorThreshold.r);
+                float gDiff = abs(diffuse.g - colorThreshold.g);
+                float bDiff = abs(diffuse.b - colorThreshold.b);
+                float rThreshold = 1.0 - (time / fadeInEnd);
+                float gThreshold = 1.0 - (time / fadeInEnd);
+                float bThreshold = 1.0 - (time / fadeInEnd);
+                if(rDiff < rThreshold && gDiff < gThreshold && bDiff < bThreshold) {
+                    discard;
+                } else {
+                    gl_FragColor = diffuse;
+                }  
+            } else if(fadeInTransitionType == 5) {
+                vec4 diffuse = texture2D(uSampler,uv);
+                gl_FragColor = mix(vec4(1.0,1.0,1.0,1.0), diffuse, (time / fadeInEnd));
+            }
+        } else if(clipEffect > 0) {
+            if(clipEffect == 1) {
+                float flicker = cos(time * 25.0);
+                if(flicker > 0.0) {
+                    vec4 diffuse = texture2D(uSampler,uv);
+                    gl_FragColor = vec4(1.0 - diffuse.r, 1.0 - diffuse.g, 1.0 - diffuse.b, diffuse.a);
+                }
+            } else if(clipEffect == 2) { // ripple
+                vec2 cPos = -1.0 + 2.0 * uv;
+                // distance of current pixel from center
+                float cLength = length(cPos);
+                vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
+                gl_FragColor = texture2D(uSampler,newUv);
+            } else if(clipEffect == 3) {
+                gl_FragColor = vec4(sharpenKernel(uv), 1.0);
             }
         }
         //gl_FragColor.a = time;
@@ -246,6 +304,7 @@ function main() {
             colorThreshold: gl.getUniformLocation(shaderProgram, "colorThreshold"),
             fadeInTransitionTime: gl.getUniformLocation(shaderProgram, "fadeInTransitionTime"),
             fadeInTransitionType: gl.getUniformLocation(shaderProgram, "fadeInTransitionType"),
+            clipEffect: gl.getUniformLocation(shaderProgram, "clipEffect"),
         }
     }
     const buffers = initBuffers(gl);
@@ -890,6 +949,7 @@ function updateSequenceInspectAttributes(sequenceItem) {
     updateClipStartTimeInputValue(sequenceItem.startTime);
     updateClipLayerInputValue(sequenceItem.clipLayer);
     updateFadeInTypeInputValue(sequenceItem.fadeInTransitionType);
+    updateClipEffectInputValue(sequenceItem.clipEffect);
     updateFadeInTimeInputValue(sequenceItem.fadeInTransitionTime);
     if(sequenceItem.colorThreshold) {
         updateColorThresholdInputValue(sequenceItem.colorThreshold);
@@ -933,6 +993,10 @@ function updateFadeInTimeInputValue(fadeInTime) {
 
 function updateFadeInTypeInputValue(fadeInType) {
     document.getElementById("fadeInSelectionInput").value = fadeInType;
+}
+
+function updateClipEffectInputValue(clipEffectType) {
+    document.getElementById("clipEffectInput").value = clipEffectType;
 }
 
 function updateColorThresholdInputValue(colorValue) {
@@ -1139,6 +1203,12 @@ document.getElementById("transitionLengthInput").addEventListener("change", func
 document.getElementById("fadeInSelectionInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         selectedSequenceItem.fadeInTransitionType = +(e.target.value)
+    }
+});
+
+document.getElementById("clipEffectInput").addEventListener("change", function(e) {
+    if(selectedSequenceItem) {
+        selectedSequenceItem.clipEffect = +(e.target.value);
     }
 });
 

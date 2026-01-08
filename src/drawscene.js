@@ -59,6 +59,7 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.uniform1i(programInfo.uniformLocations.transitionType, sequenceItem.transitionType);
     gl.uniform1i(programInfo.uniformLocations.fadeInTransitionType, sequenceItem.fadeInTransitionType);
     gl.uniform1i(programInfo.uniformLocations.sequenceIndex, sequenceItem.id + 1);
+    gl.uniform1i(programInfo.uniformLocations.clipEffect, sequenceItem.clipEffect);
     gl.uniform1f(programInfo.uniformLocations.time, time);
     gl.uniform1f(programInfo.uniformLocations.transitionTime, sequenceItem.transitionTime);
     gl.uniform1f(programInfo.uniformLocations.fadeInTransitionTime, sequenceItem.fadeInTransitionTime);
