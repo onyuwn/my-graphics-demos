@@ -8,18 +8,18 @@
             crossorigin="anonymous"
             defer>
         </script>
-        <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" name="viewport" />
     </head>
     <body>
         <div id="header">
             <h1>Jake&nbsp;&nbsp;H</h1>
             <img id="starsheader" style="transform:scaleX(200%)" src="/blinkingrowstars.gif"/>
-            <div id="headerButtons">
+            <!-- <div id="headerButtons">
                 <a>BLOG</a>
                 <a>GALLERY</a>
                 <a>downloads</a>
                 <a>CONTACT</a>
-            </div>
+            </div> -->
         </div>
         <div id="root">
             <script type="module" src="src/initbuffers.js"></script>
@@ -86,6 +86,8 @@
                         <p>Fade In Length</p>
                         <input id="fadeInLengthInput" type="number" />
                     </div>
+                    <div class="sequenceInfoItem" id="fadeInStyleSection">
+                    </div>
                     <div class="sequenceInfoItem">
                         <p>Clip Effect</p>
                         <select id="clipEffectInput">
@@ -95,7 +97,11 @@
                             <option value="3">SHARPEN</option>
                             <option value="4">DESATURATE</option>
                             <option value="5">COLOR THRESHOLD</option>
+                            <option value="6">BLUR</option>
+                            <option value="7">EMBOSS</option>
                         </select>
+                    </div>
+                    <div class="sequenceInfoItem" id="clipEffectParameterSection">
                     </div>
                     <!-- add clip effect intensity slider -->
                     <div class="sequenceInfoItem">
@@ -178,10 +184,12 @@
                     <div class="clipLayer" id="clipLayer3"></div>
                     <div class="clipLayer" id="clipLayer2"></div>
                     <div class="clipLayer" id="clipLayer1"></div>
-                    <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
-                    <button id="timelineHelpButton" class="controlButton" style="height: 50px;font-size: 24px;color:yellow;">Help</button>
-                    <button id="timelineHelpButton" class="controlButton selected" style="height: 50px;font-size: 24px;">Movie</button>
-                    <button id="timelineHelpButton" class="disabled" style="height: 50px;font-size: 24px;">Animation</button>
+                    <div style="width: auto;display: flex;">
+                        <input type="range" id="timelineHorizontalScale" value="25" min="1" max="50" />
+                        <button id="timelineHelpButton" class="controlButton" style="height: 50px;font-size: 24px;color:yellow;">Help</button>
+                        <button id="timelineHelpButton" class="controlButton selected" style="height: 50px;font-size: 24px;">Movie</button>
+                        <button id="timelineHelpButton" class="disabled" style="height: 50px;font-size: 24px;">Animation</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -208,6 +216,12 @@
                     <li>Increasing the start time from the left panel (instead of clicking and dragging to the right) will increase the start time but may not visually increase the gap between clips</li>
                 </ol>
             </p>
+            <div style="width: 100%;display: flex;justify-content: center;align-items: center;">
+                <img src="/9081882e-84eb-4f05-8223-767d34a48a01.gif" />
+            </div>
+            <p>
+                Try moving clips to higher layers to crossfade effects!!
+            </p>
             <p>
                 This certainly works better on a computer!! but all functions are still available on mobile. just clunky and less fun.
             </p>
@@ -221,6 +235,9 @@
                 Click ADD IMAGE to add an image to the timeline that will be reffered to as a <strong>CLIP</strong>. By default that image will go to the end of layer one. You can
                 change that using the options in the section below.
             </p>
+            <div style="width: 100%;display: flex;justify-content: center;align-items: center;">
+                <img src="/4e5ba5d3-a500-41e8-9773-aa235ac1cb75.gif" />
+            </div>
         </div>
         <div id="helpPopup3" class="helpPopup">
             <div class="popupHeader">

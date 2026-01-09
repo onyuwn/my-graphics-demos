@@ -30,11 +30,13 @@ const fragmentShaderSource = `
     uniform int transitionType;
     uniform int sequenceIndex;
     uniform vec3 colorThreshold;
+    uniform vec3 fadeInColorThreshold;
 
     uniform float fadeInTransitionTime;
     uniform int fadeInTransitionType;
 
     uniform int clipEffect;
+    uniform float clipEffectIntensity;
 
     uniform sampler2D uSampler;
 
@@ -42,25 +44,59 @@ const fragmentShaderSource = `
         return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
     }
 
-    vec3 sampleWithOffset(const float x, const float y, vec2 fragCoord) {
-        vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
-        uv = (uv + (uv * vec2(x, y)));
-        return texture2D(uSampler, uv).xyz;
+    vec3 sampleWithOffset(vec2 offset, vec2 uv) {
+        return texture2D(uSampler, uv + offset).rgb;
     }
 
-    vec3 sharpenKernel(vec2 fragCoord)
+    vec3 sharpenKernel(vec2 uv, float intensity)
     {
-        float offset = 1.0 / 30.0; // yuh
-        vec3 sum = sampleWithOffset(-offset, -offset, fragCoord) * 0.
-                + sampleWithOffset(-offset,  0.0, fragCoord) * -1.
-                + sampleWithOffset(-offset,  offset, fragCoord) * 0.
-                + sampleWithOffset( 0.0, -offset, fragCoord) * -1.
-                + sampleWithOffset( 0.0,  0.0, fragCoord) * 5.0
-                + sampleWithOffset( 0.0,  offset, fragCoord) * -1.
-                + sampleWithOffset( offset, -offset, fragCoord) * 0.0
-                + sampleWithOffset( offset,  0.0, fragCoord) * -1.
-                + sampleWithOffset( offset,  offset, fragCoord) * 0.0;
-        
+        vec2 texel = 1.0 / vec2(256.0,256.0);
+        texel *= intensity; // sharpening radius / strength
+
+        vec3 sum = vec3(0.0);
+
+        sum += sampleWithOffset(vec2( 0, -1) * texel, uv) * -1.0;
+        sum += sampleWithOffset(vec2(-1,  0) * texel, uv) * -1.0;
+        sum += sampleWithOffset(vec2( 0,  0) * texel, uv) *  5.0;
+        sum += sampleWithOffset(vec2( 1,  0) * texel, uv) * -1.0;
+        sum += sampleWithOffset(vec2( 0,  1) * texel, uv) * -1.0;
+
+        return sum;
+    }
+
+    vec3 blurKernel(vec2 uv, float intensity)
+    {
+        vec2 texel = intensity / vec2(256.0,256.0);
+        vec3 sum = vec3(0.0);
+
+        sum += sampleWithOffset(vec2(-1, -1) * texel, uv);
+        sum += sampleWithOffset(vec2(-1,  0) * texel, uv);
+        sum += sampleWithOffset(vec2(-1,  1) * texel, uv);
+        sum += sampleWithOffset(vec2( 0, -1) * texel, uv);
+        sum += sampleWithOffset(vec2( 0,  0) * texel, uv);
+        sum += sampleWithOffset(vec2( 0,  1) * texel, uv);
+        sum += sampleWithOffset(vec2( 1, -1) * texel, uv);
+        sum += sampleWithOffset(vec2( 1,  0) * texel, uv);
+        sum += sampleWithOffset(vec2( 1,  1) * texel, uv);
+
+        return sum / 9.0;
+    }
+
+    vec3 embossKernel(vec2 uv, float intensity)
+    {
+        vec2 texel = intensity / vec2(256.0,256.0);
+        vec3 sum = vec3(0.0);
+
+        sum += sampleWithOffset(vec2(-1, -1) * texel, uv) * -2.0;
+        sum += sampleWithOffset(vec2(-1,  0) * texel, uv) * -1.0;
+        sum += sampleWithOffset(vec2(-1,  1) * texel, uv) * 0.0;
+        sum += sampleWithOffset(vec2( 0, -1) * texel, uv) * -1.0;
+        sum += sampleWithOffset(vec2( 0,  0) * texel, uv) * 1.0;
+        sum += sampleWithOffset(vec2( 0,  1) * texel, uv) * 1.0;
+        sum += sampleWithOffset(vec2( 1, -1) * texel, uv) * 0.0;
+        sum += sampleWithOffset(vec2( 1,  0) * texel, uv) * 1.0;
+        sum += sampleWithOffset(vec2( 1,  1) * texel, uv) * 2.0;
+
         return sum;
     }
 
@@ -114,9 +150,9 @@ const fragmentShaderSource = `
                 gl_FragColor.a = (time / fadeInEnd);
             } else if(fadeInTransitionType == 4) { // erase color increase threshold over time until black
                 vec4 diffuse = texture2D(uSampler,uv);
-                float rDiff = abs(diffuse.r - colorThreshold.r);
-                float gDiff = abs(diffuse.g - colorThreshold.g);
-                float bDiff = abs(diffuse.b - colorThreshold.b);
+                float rDiff = abs(diffuse.r - fadeInColorThreshold.r);
+                float gDiff = abs(diffuse.g - fadeInColorThreshold.g);
+                float bDiff = abs(diffuse.b - fadeInColorThreshold.b);
                 float rThreshold = 1.0 - (time / fadeInEnd);
                 float gThreshold = 1.0 - (time / fadeInEnd);
                 float bThreshold = 1.0 - (time / fadeInEnd);
@@ -131,7 +167,7 @@ const fragmentShaderSource = `
             }
         } else if(clipEffect > 0) {
             if(clipEffect == 1) {
-                float flicker = cos(time * 25.0);
+                float flicker = cos(time * (25.0 * clipEffectIntensity));
                 if(flicker > 0.0) {
                     vec4 diffuse = texture2D(uSampler,uv);
                     gl_FragColor = vec4(1.0 - diffuse.r, 1.0 - diffuse.g, 1.0 - diffuse.b, diffuse.a);
@@ -140,10 +176,18 @@ const fragmentShaderSource = `
                 vec2 cPos = -1.0 + 2.0 * uv;
                 // distance of current pixel from center
                 float cLength = length(cPos);
-                vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
+                vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03 * clipEffectIntensity;
                 gl_FragColor = texture2D(uSampler,newUv);
             } else if(clipEffect == 3) {
-                gl_FragColor = vec4(sharpenKernel(uv), 1.0);
+                gl_FragColor = vec4(sharpenKernel(uv, clipEffectIntensity), 1.0);
+            } else if(clipEffect == 4) {
+                gl_FragColor = vec4(sharpenKernel(uv, clipEffectIntensity), 1.0);
+            } else if(clipEffect == 5) {
+                gl_FragColor = vec4(sharpenKernel(uv, clipEffectIntensity), 1.0);
+            } else if(clipEffect == 6) {
+                gl_FragColor = vec4(blurKernel(uv, clipEffectIntensity), 1.0);
+            } else if(clipEffect == 7) {
+                gl_FragColor = vec4(embossKernel(uv, clipEffectIntensity), 1.0);
             }
         }
         //gl_FragColor.a = time;
@@ -302,9 +346,11 @@ function main() {
             sequenceIndex: gl.getUniformLocation(shaderProgram, "sequenceIndex"),
             sequenceItemStartTime: gl.getUniformLocation(shaderProgram, "sequenceItemStartTime"),
             colorThreshold: gl.getUniformLocation(shaderProgram, "colorThreshold"),
+            fadeInColorThreshold: gl.getUniformLocation(shaderProgram, "fadeInColorThreshold"),
             fadeInTransitionTime: gl.getUniformLocation(shaderProgram, "fadeInTransitionTime"),
             fadeInTransitionType: gl.getUniformLocation(shaderProgram, "fadeInTransitionType"),
             clipEffect: gl.getUniformLocation(shaderProgram, "clipEffect"),
+            clipEffectIntensity: gl.getUniformLocation(shaderProgram, "clipEffectIntensity"),
         }
     }
     const buffers = initBuffers(gl);
@@ -493,6 +539,7 @@ function addItemToSequence(file, texture, imgData, layer) {
         transitionTime: defaultTransitionTime,
         clipLayer: layer + 1,
         clipEffect: 0,
+        clipEffectIntensity: 1.0,
         fadeInTransitionType: 0,
         fadeInTransitionTime: 1,
         clipType: "image" // can be image or gap
@@ -737,6 +784,7 @@ function insertGap(layerIdx, clipIdx, gapLength = .01) { // clip to insert gap b
         transitionTime: defaultTransitionTime,
         clipLayer: layerIdx + 1,
         clipEffect: 0,
+        clipEffectIntensity: 1.0,
         fadeInTransitionType: 0,
         fadeInTransitionTime: 0,
         clipType: "gap" // can be image or gap
@@ -860,6 +908,30 @@ function showTransitionStyleSection(transitionType) {
     }
 }
 
+function showFadeInStyleSection() {
+    let transitionStyleSection = document.getElementById("fadeInStyleSection");
+    let inputLabel = document.createElement("p");
+    inputLabel.id="fadeInColorThresholdInputLabel";
+    inputLabel.innerHTML = "threshold color"
+    let colorPicker = document.createElement("input");
+    colorPicker.type="color";
+    colorPicker.id="fadeInColorThresholdPicker";
+    colorPicker.addEventListener("change", function(e) {
+        console.warn(e.target.value);
+        let hexVal = e.target.value;
+        let rgb = hexToRgb(hexVal);
+        selectedSequenceItem.fadeInColorThresholdolorThreshold = rgb;
+        console.warn(selectedSequenceItem.colorThreshold);
+    });
+    transitionStyleSection.appendChild(inputLabel);
+    transitionStyleSection.appendChild(colorPicker);
+}
+
+function hideFadeInStyleSection() {
+    let transitionStyleSection = document.getElementById("fadeInStyleSection");
+    transitionStyleSection.innerHTML = "";
+}
+
 function hexToRgb(hexStr) {
     let hexVal = hexStr.replace("#", '');
     let r = parseInt(hexVal.substring(0, 2), 16);
@@ -954,6 +1026,10 @@ function updateSequenceInspectAttributes(sequenceItem) {
     if(sequenceItem.colorThreshold) {
         updateColorThresholdInputValue(sequenceItem.colorThreshold);
     }
+
+    if(sequenceItem.fadeInTransitionType == 4 && sequenceItem.fadeInColorThreshold) {
+        updateFadeInColorThresholdInputValue(sequenceItem.colorThreshold);
+    }
 }
 
 function updateClipNameLabel(name) {
@@ -997,14 +1073,67 @@ function updateFadeInTypeInputValue(fadeInType) {
 
 function updateClipEffectInputValue(clipEffectType) {
     document.getElementById("clipEffectInput").value = clipEffectType;
+    if(clipEffectType > 0) {
+        showClipEffectParameters();
+    } else {
+        hideClipEffectParameters();
+    }
+}
+
+function hideClipEffectParameters() {
+    let paramSection = document.getElementById("clipEffectParameterSection");
+    paramSection.innerHTML = "";
+}
+
+function showClipEffectParameters() {
+    let paramSection = document.getElementById("clipEffectParameterSection");
+    if(paramSection.innerHTML) {
+        return;
+    }
+    let intensityInputLabel = document.createElement("p");
+    intensityInputLabel.innerHTML = "Effect Intensity";
+    let slider = document.createElement("input");
+    slider.id="clipEffectIntensitySlider";
+    slider.type = "range";
+    slider.value = selectedSequenceItem.clipEffectIntensity;
+    slider.step = .25;
+    slider.max = 10.0;
+    slider.min = -10.0;
+    slider.addEventListener("input", function(e) {
+        let numberInput = document.getElementById("clipEffectIntensityInput");
+        numberInput.value = +(e.target.value);
+        updateClipIntensity(+(e.target.value));
+    });
+    let numberInput = document.createElement("input");
+    numberInput.id = "clipEffectIntensityInput";
+    numberInput.type = "number";
+    numberInput.value = selectedSequenceItem.clipEffectIntensity;
+
+    paramSection.appendChild(intensityInputLabel);
+    paramSection.appendChild(slider);
+    paramSection.appendChild(numberInput);
+}
+
+function updateClipIntensity(clipIntensity) {
+    selectedSequenceItem.clipEffectIntensity = clipIntensity;
 }
 
 function updateColorThresholdInputValue(colorValue) {
-    console.warn("updateing");
     console.warn(colorValue);
     let hexVal = rgbToHex(Math.round(colorValue[0] * 255), Math.round(colorValue[1] * 255), Math.round(colorValue[2] * 255));
     console.warn(hexVal);
     document.getElementById("colorThresholdPicker").value = hexVal;
+}
+
+function updateFadeInColorThresholdInputValue(colorValue) {
+    let styleSection = document.getElementById("fadeInStyleSection");
+    if(!styleSection.innerHTML) {
+        showFadeInStyleSection();
+    }
+    console.warn(colorValue);
+    let hexVal = rgbToHex(Math.round(colorValue[0] * 255), Math.round(colorValue[1] * 255), Math.round(colorValue[2] * 255));
+    console.warn(hexVal);
+    document.getElementById("fadeInColorThresholdPicker").value = hexVal;
 }
 
 function updateLayerStartTimes(layer, clipIdx, delta) { // used for when clips move layers
@@ -1202,13 +1331,23 @@ document.getElementById("transitionLengthInput").addEventListener("change", func
 
 document.getElementById("fadeInSelectionInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
-        selectedSequenceItem.fadeInTransitionType = +(e.target.value)
+        selectedSequenceItem.fadeInTransitionType = +(e.target.value);
+        if(selectedSequenceItem.fadeInTransitionType == 4) {
+            showFadeInStyleSection();
+        } else {
+            hideFadeInStyleSection();
+        }
     }
 });
 
 document.getElementById("clipEffectInput").addEventListener("change", function(e) {
     if(selectedSequenceItem) {
         selectedSequenceItem.clipEffect = +(e.target.value);
+        if(selectedSequenceItem.clipEffect > 0) {
+            showClipEffectParameters();
+        } else {
+            hideClipEffectParameters();
+        }
     }
 });
 
@@ -1250,9 +1389,15 @@ document.getElementById("closePopup4Button")?.addEventListener("click", function
     closeRenderSettingsHelpPopup();
 });
 
+document.getElementById("sequencerTimeline").addEventListener("scroll", function(e) {
+    document.getElementById("timelineRuler").style.top = `${window.visualViewport.offsetTop}px`;
+});
+
 function openTimelineHelpPopup() {
     document.getElementById("helpPopup1").style.display = "block";
     document.getElementById("popupGlass").style.display = "block";
+    document.getElementById("helpPopup1").style.top = `calc(${window.scrollY}px + 50%)`;
+    document.getElementById("popupGlass").style.top = `calc(${window.scrollY}px + 50%)`;
 }
 
 function closeTimelineHelpPopup() {

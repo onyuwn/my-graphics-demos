@@ -60,6 +60,7 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.uniform1i(programInfo.uniformLocations.fadeInTransitionType, sequenceItem.fadeInTransitionType);
     gl.uniform1i(programInfo.uniformLocations.sequenceIndex, sequenceItem.id + 1);
     gl.uniform1i(programInfo.uniformLocations.clipEffect, sequenceItem.clipEffect);
+    gl.uniform1f(programInfo.uniformLocations.clipEffectIntensity, sequenceItem.clipEffectIntensity);
     gl.uniform1f(programInfo.uniformLocations.time, time);
     gl.uniform1f(programInfo.uniformLocations.transitionTime, sequenceItem.transitionTime);
     gl.uniform1f(programInfo.uniformLocations.fadeInTransitionTime, sequenceItem.fadeInTransitionTime);
@@ -67,6 +68,10 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.uniform1f(programInfo.uniformLocations.sequenceItemStartTime, sequenceItem.startTime);
     if(sequenceItem.colorThreshold && sequenceItem.colorThreshold.length == 3) {
         gl.uniform3f(programInfo.uniformLocations.colorThreshold, sequenceItem.colorThreshold[0], sequenceItem.colorThreshold[1], sequenceItem.colorThreshold[2]);
+    }
+
+    if(sequenceItem.fadeInColorThreshold && sequenceItem.fadeInColorThreshold.length == 3) {
+        gl.uniform3f(programInfo.uniformLocations.fadeInColorThreshold, sequenceItem.fadeInColorThreshold[0], sequenceItem.fadeInColorThreshold[1], sequenceItem.fadeInColorThreshold[2]);
     }
 
     {

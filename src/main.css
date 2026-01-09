@@ -28,6 +28,11 @@ h1 {
     margin-bottom: 0;
 }
 
+#starsheader {
+    transform: scale(1) !important;
+    width:200px;
+}
+
 #header a, .controlButton {
     font-size: 32px;
     background-color: yellow;
@@ -113,7 +118,7 @@ h1 {
 .clipLayer {
     display: grid;
     min-width: 100%;
-    max-width: auto;
+    width: auto;
     min-height: 75px;
     padding:10px;
 }
@@ -134,7 +139,7 @@ h1 {
 }
 
 #viewportContainer {
-    height: 100%;
+    height: calc(100% - 60px);
 }
 
 #viewport {
@@ -173,6 +178,8 @@ h1 {
     border-image-width: 30px;
     padding: 25px;
     overflow-y:auto;
+    font-size: 24px;
+    color:white;
 }
 
 .smallMessage {
@@ -279,6 +286,7 @@ h1 {
     }
 
     #contentRoot {
+        max-width: 100vw;
         grid-row:1;
         grid-column: 1;
         align-items: flex-start;
@@ -289,7 +297,9 @@ h1 {
     }
 
     #sequencerTimeline {
-        width: calc(100% - 60px);
+        width: 100%;
+        max-width: calc(100% - 60px);
+        overflow: auto;
     }
 
     #sequencerRoot {
@@ -311,6 +321,19 @@ h1 {
 
     .helpPopup {
         width: 70%;
+    }
+
+    #viewport {
+        width: calc(100% - 60px);
+    }
+
+    #sequencerControls {
+        width:calc(100% - 60px);
+    }
+
+    .smallMessage {
+        width: 25vw;
+        height: 15vh;
     }
 }
 
@@ -366,7 +389,7 @@ h1 {
 }
 
 #timelineRuler {
-    position:fixed;
+    position:sticky;
     background-color: yellow;
     width: 100%;
 }
