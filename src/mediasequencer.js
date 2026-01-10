@@ -100,6 +100,27 @@ const fragmentShaderSource = `
         return sum;
     }
 
+    vec2 imagine(vec2 z, vec2 c) {
+    	return mat2(z,-z.y,z.x)*z + c;
+    }
+
+    vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) {
+        vec2 c = zoomCenter + (uv * 4.0 - vec2(2.0)) * (zoom / 4.0);
+        vec2 z = vec2(0.0);
+        bool escaped = false;
+        int iterations = 0;
+        for(int i = 0; i < 10000; i++) {
+            if(i > 5000) break;
+            z = imagine(z,c);
+            iterations = i;
+            if (length(z) > 2.0) {
+                escaped = true;
+                break;
+            }
+        }
+        return escaped ? vec4(vec3(float(iterations)) / float(50), 1.0) : vec4(vec3(0.0), 1.0);
+    }
+
     void main() {
         vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
         gl_FragColor = texture2D(uSampler, uv);
@@ -134,6 +155,9 @@ const fragmentShaderSource = `
                 }  
             } else if(transitionType == 5) {
                 gl_FragColor += (time - transitionStart) / transitionTime;
+            } else if(transitionType == 6) {
+                vec4 mandelBrotColor = mandelbrot(uv, .25 * (1.0 - ((time - transitionStart) / transitionTime)), vec2(-0.9, -.25));
+                gl_FragColor *= mix(mandelBrotColor, vec4(1.0), (1.0 - ((time - transitionStart) / transitionTime)));
             }
         } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0 && time <= sequenceItemStartTime + fadeInTransitionTime) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
@@ -188,6 +212,9 @@ const fragmentShaderSource = `
                 gl_FragColor = vec4(blurKernel(uv, clipEffectIntensity), 1.0);
             } else if(clipEffect == 7) {
                 gl_FragColor = vec4(embossKernel(uv, clipEffectIntensity), 1.0);
+            } else if(clipEffect == 8) {
+                vec4 mandelBrotColor = mandelbrot(uv, .25 * (1.0 - (time / (sequenceItemStartTime + sequenceItemLength))), vec2(-0.9, -.25));
+                gl_FragColor *= mix(mandelBrotColor, vec4(1.0), (1.0 - (1.0 - (time / (sequenceItemStartTime + sequenceItemLength)))));
             }
         }
         //gl_FragColor.a = time;
