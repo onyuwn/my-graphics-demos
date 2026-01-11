@@ -346,6 +346,10 @@ h1 {
         overflow: auto;
     }
 
+    #sequencerControls>:nth-child(1) {
+        margin-left: 50px !important;
+    }
+
     .smallMessage {
         width: 25vw;
         height: 15vh;

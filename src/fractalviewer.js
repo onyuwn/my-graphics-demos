@@ -1,5 +1,6 @@
 import { initBuffers } from "./initbuffers.js";
 import { drawScene } from "./drawscene.js";
+import { initShaderProgram, loadShader, isPowerOf2, loadTexture } from "./myglutils";
 import GIF from "gif.js.optimized";
 
 function main() {
