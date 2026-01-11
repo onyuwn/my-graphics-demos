@@ -947,6 +947,7 @@ function showTransitionStyleSection(transitionType) {
     let transitionStyleSection = document.getElementById("transitionStyleInputSection");
     hideTransitionStyleSection();
     if(transitionType==4) {
+        transitionStyleSection.style.flexDirection="row";
         let inputLabel = document.createElement("p");
         inputLabel.id="colorThresholdInputLabel";
         inputLabel.innerHTML = "threshold color"
@@ -963,35 +964,58 @@ function showTransitionStyleSection(transitionType) {
         transitionStyleSection.appendChild(inputLabel);
         transitionStyleSection.appendChild(colorPicker);
     } else if(transitionType == 6) {
+        transitionStyleSection.style.flexDirection="column";
         let inputLabel = document.createElement("p");
         inputLabel.id="fractalFadeTypeInputLabel";
         inputLabel.innerHTML = "Fade to black?"
         let fadeTypeInput = document.createElement("input");
         fadeTypeInput.type="checkbox";
+        fadeTypeInput.style.width="30px";
+        fadeTypeInput.style.height="30px";
         fadeTypeInput.id="fadeTypeInput";
         fadeTypeInput.value = selectedSequenceItem.transitionFadeType;
 
         let fractalCoordsContainer = document.createElement("div");
+        fractalCoordsContainer.style.display="flex";
+        fractalCoordsContainer.style.alignItems="center";
+        let initialZoomContainer = document.createElement("div");
+        initialZoomContainer.style.display="flex";
+        initialZoomContainer.style.alignItems="center";
+        let fadeContainer = document.createElement("div");
+        fadeContainer.style.display="flex";
+        fadeContainer.style.alignItems="center";
+
+        let coordsInputLabel = document.createElement("p");
+        coordsInputLabel.innerHTML="Fractal Coords";
         let fractalXInput = document.createElement("input");
         fractalXInput.type="number";
         fractalXInput.id="fractalXInput";
         fractalXInput.value = selectedSequenceItem.fractalX;
+        fractalXInput.step="any";
 
         let fractalYInput = document.createElement("input");
         fractalYInput.type="number";
         fractalYInput.id="fractalYInput";
         fractalYInput.value = selectedSequenceItem.fractalY;
+        fractalYInput.step="any";
 
+        fractalCoordsContainer.appendChild(coordsInputLabel);
         fractalCoordsContainer.appendChild(fractalXInput);
         fractalCoordsContainer.appendChild(fractalYInput);
 
+        let zoomInputLabel = document.createElement("p");
+        zoomInputLabel.innerHTML="InitialZoom";
         let fractalZoomInput = document.createElement("input");
         fractalZoomInput.type="number";
         fractalZoomInput.id="fractalZoomInput";
         fractalZoomInput.value = selectedSequenceItem.fractalInitialZoom;
+        fractalZoomInput.step="any";
+
 
         transitionStyleSection.appendChild(fractalCoordsContainer);
-        transitionStyleSection.appendChild(fractalZoomInput);
+        initialZoomContainer.appendChild(zoomInputLabel);
+        initialZoomContainer.appendChild(fractalZoomInput);
+        transitionStyleSection.appendChild(initialZoomContainer);
 
         fadeTypeInput.addEventListener("change", function(e) {
             selectedSequenceItem.transitionFadeType = e.target.checked;
@@ -1006,8 +1030,9 @@ function showTransitionStyleSection(transitionType) {
         fractalZoomInput.addEventListener("change", function(e) {
             selectedSequenceItem.fractalInitialZoom = e.target.value;
         });
-        transitionStyleSection.appendChild(inputLabel);
-        transitionStyleSection.appendChild(fadeTypeInput);
+        fadeContainer.appendChild(inputLabel);
+        fadeContainer.appendChild(fadeTypeInput);
+        transitionStyleSection.appendChild(fadeContainer);
     }
 }
 
