@@ -28,6 +28,7 @@ const fragmentShaderSource = `
     uniform float sequenceItemLength;
     uniform float sequenceItemStartTime;
     uniform int transitionType;
+    uniform int transitionFadeType;
     uniform int sequenceIndex;
     uniform vec3 colorThreshold;
     uniform vec3 fadeInColorThreshold;
@@ -37,6 +38,10 @@ const fragmentShaderSource = `
 
     uniform int clipEffect;
     uniform float clipEffectIntensity;
+
+    uniform float fractalX;
+    uniform float fractalY;
+    uniform float fractalInitialZoom;
 
     uniform sampler2D uSampler;
 
@@ -50,7 +55,7 @@ const fragmentShaderSource = `
 
     vec3 sharpenKernel(vec2 uv, float intensity)
     {
-        vec2 texel = 1.0 / vec2(256.0,256.0);
+        vec2 texel = 1.0 / vec2(256.0,256.0); // TODO textureSize not working? pass in resolution
         texel *= intensity; // sharpening radius / strength
 
         vec3 sum = vec3(0.0);
@@ -104,13 +109,13 @@ const fragmentShaderSource = `
     	return mat2(z,-z.y,z.x)*z + c;
     }
 
-    vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) {
+    vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter, float t) { // http://gpfault.net/posts/mandelbrot-webgl.txt.html thanks bro
         vec2 c = zoomCenter + (uv * 4.0 - vec2(2.0)) * (zoom / 4.0);
         vec2 z = vec2(0.0);
         bool escaped = false;
         int iterations = 0;
         for(int i = 0; i < 10000; i++) {
-            if(i > 5000) break;
+            if(i > 500) break;
             z = imagine(z,c);
             iterations = i;
             if (length(z) > 2.0) {
@@ -118,7 +123,21 @@ const fragmentShaderSource = `
                 break;
             }
         }
-        return escaped ? vec4(vec3(float(iterations)) / float(50), 1.0) : vec4(vec3(0.0), 1.0);
+        //return escaped ? vec4(vec3(float(iterations)) / float(5), 1.0) : vec4(vec3(0.0), 1.0);
+        if(transitionFadeType == 1) {
+            return escaped ? vec4(vec3((float(iterations) / float(500)) + t), 1.0) : vec4(1.0);
+        } else {
+            return escaped ? vec4((float(iterations) / float(500)) + t) : vec4(1.0);
+        }
+    }
+
+    vec2 rotateUv(vec2 uv, float rotation, vec2 center) {
+        vec2 delta = uv - center;
+        vec2 rotated = vec2(
+            cos(rotation) * delta.x + sin(rotation) * delta.y,
+            cos(rotation) * delta.y - sin(rotation) * delta.x
+        );
+        return rotated + center;
     }
 
     void main() {
@@ -156,8 +175,11 @@ const fragmentShaderSource = `
             } else if(transitionType == 5) {
                 gl_FragColor += (time - transitionStart) / transitionTime;
             } else if(transitionType == 6) {
-                vec4 mandelBrotColor = mandelbrot(uv, .25 * (1.0 - ((time - transitionStart) / transitionTime)), vec2(-0.9, -.25));
-                gl_FragColor *= mix(mandelBrotColor, vec4(1.0), (1.0 - ((time - transitionStart) / transitionTime)));
+                float t = 1.0 - (time / (sequenceItemStartTime + sequenceItemLength));
+                float zoom = fractalInitialZoom;
+                vec4 mandelBrotColor = mandelbrot(rotateUv(uv, time * .5, vec2(.5)), zoom * t, vec2(fractalX, fractalY), t);
+                vec4 diffuse = texture2D(uSampler, rotateUv(uv, time * .5, vec2(.5)));
+                gl_FragColor = mandelBrotColor * diffuse;
             }
         } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0 && time <= sequenceItemStartTime + fadeInTransitionTime) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
@@ -213,8 +235,8 @@ const fragmentShaderSource = `
             } else if(clipEffect == 7) {
                 gl_FragColor = vec4(embossKernel(uv, clipEffectIntensity), 1.0);
             } else if(clipEffect == 8) {
-                vec4 mandelBrotColor = mandelbrot(uv, .25 * (1.0 - (time / (sequenceItemStartTime + sequenceItemLength))), vec2(-0.9, -.25));
-                gl_FragColor *= mix(mandelBrotColor, vec4(1.0), (1.0 - (1.0 - (time / (sequenceItemStartTime + sequenceItemLength)))));
+                vec4 diffuse = texture2D(uSampler, rotateUv(uv, time * clipEffectIntensity, vec2(.5)));
+                gl_FragColor = diffuse;
             }
         }
         //gl_FragColor.a = time;
@@ -370,6 +392,7 @@ function main() {
             transitionTime: gl.getUniformLocation(shaderProgram, "transitionTime"),
             sequenceItemLength: gl.getUniformLocation(shaderProgram, "sequenceItemLength"),
             transitionType: gl.getUniformLocation(shaderProgram, "transitionType"),
+            transitionFadeType: gl.getUniformLocation(shaderProgram, "transitionFadeType"),
             sequenceIndex: gl.getUniformLocation(shaderProgram, "sequenceIndex"),
             sequenceItemStartTime: gl.getUniformLocation(shaderProgram, "sequenceItemStartTime"),
             colorThreshold: gl.getUniformLocation(shaderProgram, "colorThreshold"),
@@ -378,6 +401,9 @@ function main() {
             fadeInTransitionType: gl.getUniformLocation(shaderProgram, "fadeInTransitionType"),
             clipEffect: gl.getUniformLocation(shaderProgram, "clipEffect"),
             clipEffectIntensity: gl.getUniformLocation(shaderProgram, "clipEffectIntensity"),
+            fractalX: gl.getUniformLocation(shaderProgram, "fractalX"),
+            fractalY: gl.getUniformLocation(shaderProgram, "fractalY"),
+            fractalInitialZoom: gl.getUniformLocation(shaderProgram, "fractalInitialZoom"),
         }
     }
     const buffers = initBuffers(gl);
@@ -398,6 +424,10 @@ function main() {
                          transitionType: 1, transitionTime: 1.0, clipLayer: 1,
                          fadeInTransitionType: 0,
                          fadeInTransitionTime: 1,
+                        transitionFadeType: false,
+                        fractalInitialZoom: 0.0125,
+                        fractalX: -.95,
+                        fractalY: -.25,
                          clipType:"image"});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -564,6 +594,10 @@ function addItemToSequence(file, texture, imgData, layer) {
         id:`${layer}-${sequence[layer].length.valueOf()}`,
         transitionType: 0,
         transitionTime: defaultTransitionTime,
+        transitionFadeType: false,
+        fractalInitialZoom: 0.0125,
+        fractalX: -.95,
+        fractalY: -.25,
         clipLayer: layer + 1,
         clipEffect: 0,
         clipEffectIntensity: 1.0,
@@ -906,16 +940,12 @@ function updateSequenceItemTransition(e) {
     let transitionType = e.target.value;
     console.warn(e.target.value);
     selectedSequenceItem.transitionType = +(e.target.value);
-
-    if(transitionType == 4) {
-        showTransitionStyleSection(transitionType)
-    } else {
-        hideTransitionStyleSection()
-    }
+    showTransitionStyleSection(transitionType);
 }
 
 function showTransitionStyleSection(transitionType) {
     let transitionStyleSection = document.getElementById("transitionStyleInputSection");
+    hideTransitionStyleSection();
     if(transitionType==4) {
         let inputLabel = document.createElement("p");
         inputLabel.id="colorThresholdInputLabel";
@@ -932,6 +962,52 @@ function showTransitionStyleSection(transitionType) {
         });
         transitionStyleSection.appendChild(inputLabel);
         transitionStyleSection.appendChild(colorPicker);
+    } else if(transitionType == 6) {
+        let inputLabel = document.createElement("p");
+        inputLabel.id="fractalFadeTypeInputLabel";
+        inputLabel.innerHTML = "Fade to black?"
+        let fadeTypeInput = document.createElement("input");
+        fadeTypeInput.type="checkbox";
+        fadeTypeInput.id="fadeTypeInput";
+        fadeTypeInput.value = selectedSequenceItem.transitionFadeType;
+
+        let fractalCoordsContainer = document.createElement("div");
+        let fractalXInput = document.createElement("input");
+        fractalXInput.type="number";
+        fractalXInput.id="fractalXInput";
+        fractalXInput.value = selectedSequenceItem.fractalX;
+
+        let fractalYInput = document.createElement("input");
+        fractalYInput.type="number";
+        fractalYInput.id="fractalYInput";
+        fractalYInput.value = selectedSequenceItem.fractalY;
+
+        fractalCoordsContainer.appendChild(fractalXInput);
+        fractalCoordsContainer.appendChild(fractalYInput);
+
+        let fractalZoomInput = document.createElement("input");
+        fractalZoomInput.type="number";
+        fractalZoomInput.id="fractalZoomInput";
+        fractalZoomInput.value = selectedSequenceItem.fractalInitialZoom;
+
+        transitionStyleSection.appendChild(fractalCoordsContainer);
+        transitionStyleSection.appendChild(fractalZoomInput);
+
+        fadeTypeInput.addEventListener("change", function(e) {
+            selectedSequenceItem.transitionFadeType = e.target.checked;
+        });
+
+        fractalXInput.addEventListener("change", function(e) {
+            selectedSequenceItem.fractalX = e.target.value;
+        });
+        fractalYInput.addEventListener("change", function(e) {
+            selectedSequenceItem.fractalY = e.target.value;
+        });
+        fractalZoomInput.addEventListener("change", function(e) {
+            selectedSequenceItem.fractalInitialZoom = e.target.value;
+        });
+        transitionStyleSection.appendChild(inputLabel);
+        transitionStyleSection.appendChild(fadeTypeInput);
     }
 }
 
