@@ -129,13 +129,26 @@ h1 {
     top:50%;
 }
 
-#sequencerRoot {
+#sequencerRoot, #fractalViewerRoot {
     display: grid;
     grid-template-rows: 3fr auto auto;
     width: 75%;
     height: 600px;
     background-image: url("/my-graphics-demos/uipamnel1.png") !important;
     /* background-size: cover; */
+}
+
+#fractalViewerRoot {
+    background-size:50% 50%;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+#fractalViewerRoot #gl-canvas {
+    width: 70%;
+    height: auto;
+    aspect-ratio: 1 / 1;
 }
 
 #viewportContainer {
@@ -302,7 +315,7 @@ h1 {
         overflow: auto;
     }
 
-    #sequencerRoot {
+    #sequencerRoot, #fractalViewerRoot {
         width: calc(100% - 60px);
     }
 
