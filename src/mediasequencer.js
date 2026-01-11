@@ -1,7 +1,6 @@
 import { initBuffers } from "./initbuffers.js";
 import { drawScene } from "./drawscene.js";
 import GIF from "gif.js.optimized";
-import { select } from "three/tsl";
 
 const MAX_LAYERS = 4;
 
