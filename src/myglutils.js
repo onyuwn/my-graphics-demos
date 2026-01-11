@@ -86,3 +86,41 @@ function loadTexture(gl, url) {
     };
     return texture;
 }
+
+function setPositionAttribute(gl, buffers, programInfo) {
+    const numComponents = 2;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.vertexPosition,
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset,
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+}
+
+function setTextureAttribute(gl, buffers, programInfo) {
+    const num = 2;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.textureCoord,
+      num,
+      type,
+      normalize,
+      stride,
+      offset,
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+}
+
+export { initShaderProgram, loadShader, isPowerOf2, loadTexture, setTextureAttribute, setPositionAttribute}

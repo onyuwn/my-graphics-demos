@@ -403,6 +403,7 @@ function main() {
             fractalX: gl.getUniformLocation(shaderProgram, "fractalX"),
             fractalY: gl.getUniformLocation(shaderProgram, "fractalY"),
             fractalInitialZoom: gl.getUniformLocation(shaderProgram, "fractalInitialZoom"),
+            invertFractal: gl.getUniformLocation(shaderProgram, "invertFractal")
         }
     }
     const buffers = initBuffers(gl);
@@ -427,6 +428,7 @@ function main() {
                         fractalInitialZoom: 0.0125,
                         fractalX: -.95,
                         fractalY: -.25,
+                        invertFractal: false,
                          clipType:"image"});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -597,6 +599,7 @@ function addItemToSequence(file, texture, imgData, layer) {
         fractalInitialZoom: 0.0125,
         fractalX: -.95,
         fractalY: -.25,
+        invertFractal: false,
         clipLayer: layer + 1,
         clipEffect: 0,
         clipEffectIntensity: 1.0,

@@ -1,0 +1,26 @@
+precision highp float;
+varying highp vec2 vTextureCoord;
+uniform float time;
+uniform sampler2D uSampler;
+
+vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/posts/mandelbrot-webgl.txt.html thanks bro
+    vec2 c = zoomCenter + (uv * 4.0 - vec2(2.0)) * (zoom / 4.0);
+    vec2 z = vec2(0.0);
+    bool escaped = false;
+    int iterations = 0;
+    for(int i = 0; i < 10000; i++) {
+        if(i > 500) break;
+        z = imagine(z,c);
+        iterations = i;
+        if (length(z) > 2.0) {
+            escaped = true;
+            break;
+        }
+    }
+    return escaped ? vec4(vec3(float(iterations)) / float(5), 1.0) : vec4(vec3(0.0), 1.0);
+}
+
+void main() {
+    vec2 uv = vec2(vTextureCoord.x, 1.0 - vTextureCoord.y);
+    gl_FragColor = vec4(1.0);
+}
