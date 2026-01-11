@@ -323,12 +323,14 @@ h1 {
         width: 70%;
     }
 
-    #viewport {
-        width: calc(100% - 60px);
+    #viewport, #sequenceTimerContainer {
+        max-width: calc(100vw - 60px);
+        overflow: auto;
     }
 
     #sequencerControls {
-        width:calc(100% - 60px);
+        max-width: calc(100vw - 60px);
+        overflow: auto;
     }
 
     .smallMessage {
