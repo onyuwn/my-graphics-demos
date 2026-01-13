@@ -168,5 +168,8 @@ function initializeFractalForm(fractalType) {
 }
 
 window.addEventListener("resize", function(e) {
-
+    let canvas = document.getElementById("gl-canvas");
+    console.warn(canvas.clientHeight);
+    console.warn(canvas.clientWidth);
+    fractalFormData.canvasDims = [canvas.clientHeight, canvas.clientWidth];
 });

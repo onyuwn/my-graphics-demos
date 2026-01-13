@@ -6,7 +6,8 @@ export default {
           input: {
             main: './index.html',
             sequencer: './sequencer.html',
-            treebuilder: './treebuilder.html'
+            treebuilder: './treebuilder.html',
+            fractalviewer: './fractalviewer.html'
           },
         },
       },
