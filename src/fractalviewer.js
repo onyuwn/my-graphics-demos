@@ -17,6 +17,7 @@ let fractalFormData = {
     effectsOn: 0,
     fractalPrecision: 100
 }
+let captureRequested = false;
 
 function main() {
     const canvas = document.querySelector("#gl-canvas");
@@ -76,6 +77,19 @@ function main() {
         gl.depthMask(false);
         drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, 1, now, fractalFormData.fractalTexture);
         gl.depthMask(true);
+        
+        if(captureRequested) {
+            document.getElementById("gl-canvas").toBlob(x=>{
+                console.warn("blob");
+                let url = URL.createObjectURL(x);
+                let downloadButton = document.createElement("a");
+                //window.open(URL.createObjectURL(x));
+                downloadButton.href = url;
+                downloadButton.download = `jakehsequencer${new Date(Date.now()).toISOString().replace(":","")}.png`;
+                downloadButton.click();
+            }, 'image/png');
+            captureRequested = false;
+        }
 
         requestAnimationFrame(render);
     }
@@ -258,6 +272,14 @@ function initializeFractalForm(fractalType) {
         fractalColorEntry.style.height="10px";
         colorListContainer.appendChild(fractalColorEntry);
         console.warn(fractalFormData);
+    });
+
+    let exportButton = document.createElement("button");
+    exportButton.innerHTML = "save image";
+    exportButton.className="controlButton";
+    formContainer.appendChild(exportButton);
+    exportButton.addEventListener("click", function(e) {
+        captureRequested = true;
     });
 }
 
