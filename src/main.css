@@ -139,6 +139,15 @@ h1 {
 }
 
 #fractalViewerRoot {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 75%;
+    height: 600px;
+    background-image: url("/my-graphics-demos/uipamnel1.png") !important;
+}
+
+#fractalViewerRoot {
     background-size:50% 50%;
     display: flex !important;
     align-items: center;

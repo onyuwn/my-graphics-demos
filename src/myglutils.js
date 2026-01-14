@@ -37,53 +37,34 @@ function isPowerOf2(value) {
     return (value & (value - 1)) === 0;
 }
 
-function loadTexture(gl, url) {
+function loadTexture(gl, width, height, colorArray) {
     const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
 
     const level = 0;
     const internalFormat = gl.RGBA;
-    const width = 1;
-    const height = 1;
     const border = 0;
     const srcFormat = gl.RGBA;
     const srcType = gl.UNSIGNED_BYTE;
     const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(
-        gl.TEXTURE_2D,
-        level,
-        internalFormat,
-        width,
-        height,
-        border,
-        srcFormat,
-        srcType,
-        pixel,
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      colorArray.length / 4,
+      1,
+      0,
+      srcFormat,
+      srcType,
+      colorArray,
     );
 
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.src = url;
-    image.onload = () => {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        level,
-        internalFormat,
-        srcFormat,
-        srcType,
-        image,
-      );
-
-      if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-      } else {
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      }
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    };
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     return texture;
 }
 
@@ -123,4 +104,33 @@ function setTextureAttribute(gl, buffers, programInfo) {
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
 }
 
-export { initShaderProgram, loadShader, isPowerOf2, loadTexture, setTextureAttribute, setPositionAttribute}
+function hexToRgb(hexStr) {
+    let hexVal = hexStr.replace("#", '');
+    let r = parseInt(hexVal.substring(0, 2), 16);
+    let g = parseInt(hexVal.substring(2, 4), 16);
+    let b = parseInt(hexVal.substring(4, 6), 16);
+    return [r / 255.0, g / 255.0, b / 255.0];
+}
+
+function hexToRgba(hexStr) {
+    let hexVal = hexStr.replace("#", '');
+    let r = parseInt(hexVal.substring(0, 2), 16);
+    let g = parseInt(hexVal.substring(2, 4), 16);
+    let b = parseInt(hexVal.substring(4, 6), 16);
+    return [r, g, b, 255.0];
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+  
+function rgbToHex(r, g, b) {
+    return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+}
+
+export { 
+  initShaderProgram, loadShader, isPowerOf2,
+  loadTexture, setTextureAttribute, setPositionAttribute,
+   hexToRgb, componentToHex, rgbToHex, hexToRgba
+}

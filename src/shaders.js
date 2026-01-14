@@ -4,9 +4,13 @@ attribute vec4 aVertexPosition;
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
+varying highp vec2 vTextureCoord;
+
 void main() {
-    gl_Position = vec4(aVertexPosition.x, aVertexPosition.y, 0.0, 1.0);
-}`;
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vTextureCoord = aTextureCoord;
+}
+`;
 
 let mandelBrotFragShader = `
 precision highp float;
@@ -17,9 +21,18 @@ uniform float fractalX;
 uniform float fractalY;
 uniform float fractalInitialZoom;
 uniform vec2 canvasRes;
+uniform int colorCount;
+uniform int effectsOn;
+uniform sampler2D fractalTexture;
+uniform int fractalPrecision;
 
 vec2 imagine(vec2 z, vec2 c) {
     return mat2(z,-z.y,z.x)*z + c;
+}
+
+vec4 palette(float intensity) {
+    //float uvX = (intensity * float(colorCount)) / float(colorCount);
+    return texture2D(fractalTexture, vec2(intensity, .5));
 }
 
 vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/posts/mandelbrot-webgl.txt.html thanks bro
@@ -28,7 +41,7 @@ vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/po
     bool escaped = false;
     int iterations = 0;
     for(int i = 0; i < 10000; i++) {
-        if(i > 5000) break;
+        if(i > 10000) break;
         z = imagine(z,c);
         iterations = i;
         if (length(z) > 2.0) {
@@ -36,7 +49,11 @@ vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/po
             break;
         }
     }
-    return escaped ? vec4(vec3(float(iterations)) / float(500), 1.0) : vec4(vec3(0.0), 1.0);
+    if(effectsOn == 1) {
+        return escaped ? palette(float(iterations) / float(fractalPrecision)) : texture2D(fractalTexture, vec2(0.0));
+    } else {
+        return escaped ? vec4(float(iterations) / float(fractalPrecision)) : vec4(0.0);
+    }
 }
 
 void main() {

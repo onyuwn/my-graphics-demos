@@ -1,6 +1,6 @@
 import { initBuffers } from "./initbuffers.js";
 import { drawScene } from "./drawscene.js";
-import { initShaderProgram, loadShader, isPowerOf2, loadTexture, setPositionAttribute, setTextureAttribute } from "./myglutils";
+import { initShaderProgram, loadShader, isPowerOf2, loadTexture, setPositionAttribute, setTextureAttribute, hexToRgba } from "./myglutils";
 import { mandelBrotFragShader, basicVertShader } from "./shaders.js";
 import GIF from "gif.js.optimized";
 
@@ -10,7 +10,12 @@ let fractalFormData = {
     fractalInitialZoom: 0.0125,
     fractalX: -.95,
     fractalY: -.25,
-    canvasDims: [350 ,350]
+    canvasDims: [350 ,350],
+    fractalColors: [], // rgba sets
+    fractalTexture: undefined, // actual final texture
+    fractalColorCount: 0,
+    effectsOn: 0,
+    fractalPrecision: 1000
 }
 
 function main() {
@@ -44,10 +49,17 @@ function main() {
             fractalY: gl.getUniformLocation(shaderProgram, "fractalY"),
             fractalInitialZoom: gl.getUniformLocation(shaderProgram, "fractalInitialZoom"),
             canvasRes: gl.getUniformLocation(shaderProgram, "canvasRes"),
+            fractalTexture: gl.getUniformLocation(shaderProgram, "fractalTexture"),
+            colorCount: gl.getUniformLocation(shaderProgram, "colorCount"),
+            effectsOn: gl.getUniformLocation(shaderProgram, "effectsOn"),
+            fractalPrecision: gl.getUniformLocation(shaderProgram, "fractalPrecision"),
         }
     };
     initializeFractalForm();
+    console.warn(fractalFormData.fractalColors);
+    fractalFormData.fractalTexture = loadTexture(glContext, fractalFormData.colorCount, 1, new Uint8Array([255,255,255,255]));
     const buffers = initBuffers(gl);
+    updateCanvasSize();
     function render(now) {
         now *= 0.001; // convert to seconds
 
@@ -61,9 +73,8 @@ function main() {
         
         const projectionMatrix = mat4.create();
         mat4.ortho(projectionMatrix, -1 , 1, -1 , 1, .1, 100);
-
         gl.depthMask(false);
-        drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, 1);
+        drawPlane(gl, projectionMatrix, programInfo, buffers, {x:0, y:0}, 1, now, fractalFormData.fractalTexture);
         gl.depthMask(true);
 
         requestAnimationFrame(render);
@@ -72,7 +83,7 @@ function main() {
 }
 main();
 
-function drawPlane(gl, projection, programInfo, buffers, position, layer, time) {
+function drawPlane(gl, projection, programInfo, buffers, position, layer, time, texture) {
     const modelViewMatrix = mat4.create();
     mat4.translate(modelViewMatrix, modelViewMatrix, [position.x, position.y, -.1 * layer]);
 
@@ -91,14 +102,22 @@ function drawPlane(gl, projection, programInfo, buffers, position, layer, time) 
         false,
         modelViewMatrix,
     );
-    //gl.activeTexture(gl.TEXTURE0);
-    //gl.bindTexture(gl.TEXTURE_2D, sequenceItem.texture);
+    if(texture) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+    } else {
+        console.warn("no texstrue");
+    }
     gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
     gl.uniform1f(programInfo.uniformLocations.time, time);
     gl.uniform1f(programInfo.uniformLocations.fractalX, fractalFormData.fractalX);
     gl.uniform1f(programInfo.uniformLocations.fractalY, fractalFormData.fractalY);
     gl.uniform1f(programInfo.uniformLocations.fractalInitialZoom, fractalFormData.fractalInitialZoom);
     gl.uniform2f(programInfo.uniformLocations.canvasRes, fractalFormData.canvasDims[0], fractalFormData.canvasDims[1]);
+    gl.uniform1i(programInfo.uniformLocations.fractalTexture, 0);
+    gl.uniform1i(programInfo.uniformLocations.colorCount, fractalFormData.fractalColorCount);
+    gl.uniform1i(programInfo.uniformLocations.effectsOn, fractalFormData.effectsOn);
+    gl.uniform1i(programInfo.uniformLocations.fractalPrecision, fractalFormData.fractalPrecision);
 
     {
         const offset = 0;
@@ -114,9 +133,11 @@ function initializeFractalForm(fractalType) {
     let fractalCoordsContainer = document.createElement("div");
     fractalCoordsContainer.style.display="flex";
     fractalCoordsContainer.style.alignItems="center";
+    fractalCoordsContainer.style.justifyContent="space-between";
     let initialZoomContainer = document.createElement("div");
     initialZoomContainer.style.display="flex";
     initialZoomContainer.style.alignItems="center";
+    initialZoomContainer.style.justifyContent="space-between";
     let fadeContainer = document.createElement("div");
     fadeContainer.style.display="flex";
     fadeContainer.style.alignItems="center";
@@ -140,13 +161,43 @@ function initializeFractalForm(fractalType) {
     fractalCoordsContainer.appendChild(fractalYInput);
 
     let zoomInputLabel = document.createElement("p");
-    zoomInputLabel.innerHTML="InitialZoom";
+    zoomInputLabel.innerHTML="Zoom";
     let fractalZoomInput = document.createElement("input");
     fractalZoomInput.type="number";
     fractalZoomInput.id="fractalZoomInput";
     fractalZoomInput.value = fractalFormData.fractalInitialZoom;
     fractalZoomInput.step="any";
 
+    let precisionInputsContainer = document.createElement("div");
+    precisionInputsContainer.id = "precisionInputsContainer";
+    precisionInputsContainer.style.display="flex";
+    precisionInputsContainer.style.justifyContent="space-between";
+    let precisionLabel = document.createElement("p");
+    precisionLabel.innerHTML = "Precision";
+    let precisionSlider = document.createElement("input");
+    precisionSlider.min = 10;
+    precisionSlider.value = 100;
+    precisionSlider.max = 10000;
+    precisionSlider.id = "fractalPrecisionSlider";
+    precisionSlider.type="range";
+    let precisionInput = document.createElement("input");
+    precisionInput.id = "fractalPrecisionInput";
+    precisionInput.type="number";
+    precisionInput.value=100
+    precisionInputsContainer.appendChild(precisionLabel);
+    precisionInputsContainer.appendChild(precisionSlider);
+    precisionInputsContainer.appendChild(precisionInput);
+
+    precisionSlider.addEventListener("input", function(e) {
+        precisionInput.value = +(e.target.value);
+        fractalFormData.fractalPrecision = +(e.target.value);
+    });
+
+    precisionInput.addEventListener("change", function(e) {
+        fractalFormData.fractalPrecision = +(e.target.value);
+    });
+
+    formContainer.appendChild(precisionInputsContainer);
 
     formContainer.appendChild(fractalCoordsContainer);
     initialZoomContainer.appendChild(zoomInputLabel);
@@ -165,11 +216,90 @@ function initializeFractalForm(fractalType) {
         fractalFormData.fractalInitialZoom = +(e.target.value);
         console.warn(fractalFormData);
     });
+
+    let canvas = document.getElementById("gl-canvas");
+    fractalFormData.canvasDims = [canvas.offsetWidth, canvas.offsetHeight];
+
+    let colorList = document.createElement("div");
+    colorList.id="fractalColorList";
+    colorList.style.height="auto";
+    let colorControlsContainer = document.createElement("div");
+    colorControlsContainer.style.display="flex";
+    colorControlsContainer.style.alignItems="center";
+    colorControlsContainer.style.justifyContent="space-between";
+    colorControlsContainer.id="colorControlsContainer";
+    let colorPicker = document.createElement("input");
+    colorPicker.type="color";
+    let colorPickerLabel = document.createElement("p");
+    colorPickerLabel.innerHTML="add color";
+
+    colorControlsContainer.appendChild(colorPickerLabel);
+    colorControlsContainer.appendChild(colorPicker);
+    formContainer.appendChild(colorControlsContainer);
+    formContainer.appendChild(colorList);
+    colorPicker.addEventListener("change", function(e) {
+        let colorListContainer = document.getElementById("fractalColorList");
+        let newColorRGB = hexToRgba(e.target.value);
+        let increaseCount = false;
+        for(let i = 0; i < newColorRGB.length; i++) {
+            let idx = i + (fractalFormData.fractalColorCount * 4);
+            if(fractalFormData.fractalColors[idx]) {
+                fractalFormData.fractalColors[idx] = newColorRGB[i];
+            } else {
+                fractalFormData.fractalColors.push(newColorRGB[i]);
+                increaseCount = true;
+            }
+        }
+        fractalFormData.fractalColorCount++;
+        fractalFormData.fractalTexture = loadTexture(glContext, fractalFormData.colorCount, 1, new Uint8Array(fractalFormData.fractalColors));
+        let fractalColorEntry = document.createElement("div");
+        fractalColorEntry.style.background = e.target.value;
+        fractalColorEntry.style.height="10px";
+        colorListContainer.appendChild(fractalColorEntry);
+        console.warn(fractalFormData);
+    });
 }
 
 window.addEventListener("resize", function(e) {
+    updateCanvasSize();
+});
+
+function updateCanvasSize() {
     let canvas = document.getElementById("gl-canvas");
-    console.warn(canvas.clientHeight);
-    console.warn(canvas.clientWidth);
-    fractalFormData.canvasDims = [canvas.clientHeight, canvas.clientWidth];
+    const displayWidth = canvas.clientWidth;
+    const displayHeight = canvas.clientHeight;
+    fractalFormData.canvasDims = [displayWidth, displayHeight];
+    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+    }
+    glContext.viewport(0,0,displayWidth, displayHeight);
+}
+
+document.getElementById("effectsToggle").addEventListener("change", function(e) {
+    fractalFormData.effectsOn = e.target.checked == true ? 1 : 0;
+});
+
+document.getElementById("zoomInButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalInitialZoom -= .0001;
+});
+
+document.getElementById("zoomOutButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalInitialZoom += .0001;
+});
+
+document.getElementById("moveLeftButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalX -= .1 * fractalFormData.fractalInitialZoom;
+});
+
+document.getElementById("moveRightButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalX += .1 * fractalFormData.fractalInitialZoom;
+});
+
+document.getElementById("moveUpButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalY += .1 * fractalFormData.fractalInitialZoom;
+});
+
+document.getElementById("moveDownButton").addEventListener("mousedown", function(e) {
+    fractalFormData.fractalY -= .1 * fractalFormData.fractalInitialZoom;
 });
