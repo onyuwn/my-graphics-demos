@@ -32,7 +32,7 @@ vec2 imagine(vec2 z, vec2 c) {
 
 vec4 palette(float intensity) {
     //float uvX = (intensity * float(colorCount)) / float(colorCount);
-    return texture2D(fractalTexture, vec2(intensity, .5));
+    return texture2D(fractalTexture, vec2(intensity, .5)) * vec4(vec3(1.0 - pow(intensity, 2.0)), 1.0);
 }
 
 vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/posts/mandelbrot-webgl.txt.html thanks bro
@@ -40,8 +40,8 @@ vec4 mandelbrot(vec2 uv, float zoom, vec2 zoomCenter) { // http://gpfault.net/po
     vec2 z = vec2(0.0);
     bool escaped = false;
     int iterations = 0;
-    for(int i = 0; i < 10000; i++) {
-        if(i > 10000) break;
+    for(int i = 0; i < 10000; i++) { // max iterations todo
+        if(i > fractalPrecision) break;
         z = imagine(z,c);
         iterations = i;
         if (length(z) > 2.0) {

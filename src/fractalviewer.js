@@ -15,7 +15,7 @@ let fractalFormData = {
     fractalTexture: undefined, // actual final texture
     fractalColorCount: 0,
     effectsOn: 0,
-    fractalPrecision: 1000
+    fractalPrecision: 100
 }
 
 function main() {
@@ -178,6 +178,7 @@ function initializeFractalForm(fractalType) {
     precisionSlider.min = 10;
     precisionSlider.value = 100;
     precisionSlider.max = 10000;
+    precisionSlider.step = .1;
     precisionSlider.id = "fractalPrecisionSlider";
     precisionSlider.type="range";
     let precisionInput = document.createElement("input");
