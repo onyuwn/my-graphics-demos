@@ -8,10 +8,10 @@
             defer>
         </script>
         <meta content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" name="viewport" />
-      <script type="module" crossorigin src="/my-graphics-demos/assets/fractalviewer-BzHbVGwB.js"></script>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/fractalviewer-1N7eETQs.js"></script>
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/gif-kDgybj-X.js">
-      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-Dmf6KMIj.css">
+      <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-pw5kMAWS.css">
     </head>
     <body>
         <div id="header">
@@ -22,17 +22,26 @@
             <div id="contentRoot">
                 <div class="post" id="fractalviewerRoot">
                     <canvas id="gl-canvas" style="border:1px solid red"></canvas>
-                </div>
-                <div id="fractalViewerControls">
-                    <button>left</button>
-                    <button>right</button>
-                    <button>up</button>
-                    <button>down</button>
-                    <button>zoom in</button>
-                    <button>zoom out</button>
+                    <div id="fractalViewerControls">
+                        <button id="moveLeftButton" class="controlButton">left</button>
+                        <button id="moveRightButton" class="controlButton">right</button>
+                        <button id="moveUpButton" class="controlButton">up</button>
+                        <button id="moveDownButton" class="controlButton">down</button>
+                        <button id="zoomInButton" class="controlButton2">zoom in</button>
+                        <button id="zoomOutButton" class="controlButton2">zoom out</button>
+                        <input id="effectsToggle" type="checkbox" style="display: none;" />
+                        <label for="effectsToggle" class="controlButton2">
+                            Effects?
+                        </label>
+                    </div>
                 </div>
             </div>
             <div id="sidebar" class="fractalFormContainer">
+                <select>
+                    <option>mandelbrot</option>
+                    <option>trees</option>
+                    <option>disc</option>
+                </select>
                 <div id="fractalForm">
 
                 </div>
