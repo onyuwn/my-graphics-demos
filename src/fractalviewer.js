@@ -304,25 +304,54 @@ document.getElementById("effectsToggle").addEventListener("change", function(e) 
 });
 
 document.getElementById("zoomInButton").addEventListener("mousedown", function(e) {
-    fractalFormData.fractalInitialZoom -= .0001;
+    fractalFormData.fractalInitialZoom -= fractalFormData.fractalInitialZoom * .1;
+    updateFractalFormInputs();
 });
 
 document.getElementById("zoomOutButton").addEventListener("mousedown", function(e) {
-    fractalFormData.fractalInitialZoom += .0001;
+    fractalFormData.fractalInitialZoom += fractalFormData.fractalInitialZoom * .1;
+    updateFractalFormInputs();
 });
 
 document.getElementById("moveLeftButton").addEventListener("mousedown", function(e) {
     fractalFormData.fractalX -= .1 * fractalFormData.fractalInitialZoom;
+    updateFractalFormInputs();
 });
 
 document.getElementById("moveRightButton").addEventListener("mousedown", function(e) {
     fractalFormData.fractalX += .1 * fractalFormData.fractalInitialZoom;
+    updateFractalFormInputs();
 });
 
 document.getElementById("moveUpButton").addEventListener("mousedown", function(e) {
     fractalFormData.fractalY += .1 * fractalFormData.fractalInitialZoom;
+    updateFractalFormInputs();
 });
 
 document.getElementById("moveDownButton").addEventListener("mousedown", function(e) {
     fractalFormData.fractalY -= .1 * fractalFormData.fractalInitialZoom;
+    updateFractalFormInputs();
 });
+
+function updateFractalFormInputs() {
+    setPrecisionInputValue(fractalFormData.fractalPrecision);
+    setFractalXInputValue(fractalFormData.fractalX);
+    setFractalYInputValue(fractalFormData.fractalY);
+    setZoomInputValue(fractalFormData.fractalInitialZoom);
+}
+
+function setPrecisionInputValue(precisionValue) {
+    document.getElementById("fractalPrecisionInput").value = precisionValue;
+}
+
+function setFractalXInputValue(xVal) {
+    document.getElementById("fractalXInput").value = xVal;
+}
+
+function setFractalYInputValue(yVal) {
+    document.getElementById("fractalYInput").value = yVal;
+}
+
+function setZoomInputValue(zoomVal) {
+    document.getElementById("fractalZoomInput").value = zoomVal;
+}
