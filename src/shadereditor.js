@@ -35,7 +35,7 @@ function createNewShader() {
 function addNewNodeToEditor(nodeType) {
     let shaderEditorPanel = getShaderEditorPanelElement();
     // let shaderNode = createPopup(shaderEditorPanel.offsetLeft + shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetTop + shaderEditorPanel.offsetHeight / 4, 300, 300);
-    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 4, 300, 300);
+    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 4, 75, 100);
     shaderNode.style.position="relative";
     let nodeContainerContent = getFlexContainer("300px", "column");
     shaderNode.style.background="white";
@@ -43,16 +43,13 @@ function addNewNodeToEditor(nodeType) {
     let nodeConnection = document.createElement("div");
     nodeConnection.className="nodeConnection";
     console.warn(shaderNode.offsetWidth);
-    nodeConnection.style.left=`${+(shaderNode.style.width.replace("px", ""))-12.5}px`;
+    nodeConnection.style.left=`${+(shaderNode.style.width.replace("px", ""))-5}px`;
     shaderNode.appendChild(nodeConnection);
     shaders[selectedShaderIndex].nodes.push(nodeData);
     shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length}`;
     shaderNode.appendChild(nodeContainerContent);
     shaderEditorPanel.appendChild(shaderNode);
     shaderNode.addEventListener("pointerdown", function(e) {
-        console.warn("nodeselected");
-        console.warn(e.target.getBoundingClientRect());
-        console.warn(e.target.className);
         if(e.target.id.includes("node")) {
             selectedShaderNode = e.target;
             initialShaderNodeSelectionPosition = [e.clientX, e.clientY];
@@ -77,14 +74,16 @@ function addNewNodeToEditor(nodeType) {
 function createNewNode(nodeType) {
     return {
         nodeType: nodeType,
-        inputs: [],
+        inputs: [], // input can either be manually set or take value of node
         outputs: [],
         value: ""
     }
 }
 
 function compileShader() {
-
+    // each node is like a method call
+    // find what unique methos to add to shader file
+    // traverse through connections to build main method of other method calls
 }
 
 // ui functions
