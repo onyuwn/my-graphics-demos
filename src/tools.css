@@ -1,0 +1,49 @@
+.workspaceRoot {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: 100%;
+    flex-grow: 1;
+}
+
+.listView {
+    width: 150px;
+    height: 100%;
+    background-color: white;
+    opacity: .5;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.collapsed {
+    width: 0 !important;
+}
+
+.toolRoot {
+    height: calc(100% - 130px); /* minus header + its margin */
+    display: flex;
+}
+
+.workspaceRoot>.panel:nth-child(odd) {
+    border: 2px solid rgba(0, 255, 0, .5);
+}
+
+.workspaceRoot>.panel:nth-child(even) {
+    border: 2px solid rgba(0, 0, 255, .5);
+}
+
+.panel {
+    background-color: rgba(143, 143, 143, 0.5);
+}
+
+.panelToolBar {
+    background-color: rgba(143, 143, 143, 0.5);
+    height: 50px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.panelToolBar input {
+    height: 80% !important;
+}
