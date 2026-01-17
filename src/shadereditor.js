@@ -141,6 +141,10 @@ function moveSelectedShaderNode(pointerEvent) {
     selectedShaderNode.style.top=`${(pointerEvent.clientY - getShaderEditorPanelElement().offsetTop) - initialYOffset}px`;
 }
 
+function getMathForm() {
+    let formContainer = document.createElement("div");
+}
+
 // event handlers for static elements
 document.getElementById(addNodeButtonId).addEventListener("click", showNodeSelectionPopup);
 window.addEventListener("pointermove", function(e) {
