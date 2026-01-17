@@ -76,6 +76,10 @@ function createNewNode(nodeType) {
         nodeType: nodeType,
         inputs: [], // input can either be manually set or take value of node
         outputs: [],
+        position: {
+            x: 0,
+            y: 0
+        },
         value: ""
     }
 }
@@ -93,7 +97,9 @@ function showNodeSelectionPopup() {
     let popupHeader = getPopupHeader("Add New Node");
     let popupFooter = getFlexContainer("100%", "row", "flex-start", "center");
     newPopup.id = nodeSelectionPopupId;
+    newPopup.style.background="rgba(255,255,255,.75)";
     let popupCancelButton = getPopupCancelButton(nodeSelectionPopupId);
+    popupCancelButton.innerHTML="Cancel";
     popupFooter.appendChild(popupCancelButton);
     newPopup.appendChild(popupHeader);
     newPopup.appendChild(getNodeSelectionForm());
@@ -141,8 +147,18 @@ function moveSelectedShaderNode(pointerEvent) {
     selectedShaderNode.style.top=`${(pointerEvent.clientY - getShaderEditorPanelElement().offsetTop) - initialYOffset}px`;
 }
 
-function getMathForm() {
-    let formContainer = document.createElement("div");
+function getMathForm(nodeId) {
+    let formContainer = getFlexContainer(undefined, "column", "flex-start");
+    let operationsInputContainer = getFlexContainer();
+    let operationsInput = document.createElement("select");
+    let operationsInputLabel = document.createElement("p");
+    operationsInputContainer.appendChild(operationsInputLabel);
+    operationsInputContainer.appendChild(operationsInput);
+    operationInputLabel.innerHTML="operation";
+    let operationsContainer = getFlexContainer(undefined, "column", "flex-start");
+    operationsInput.addEventListener("change", function(e) {
+        // update further inputs and outputs?
+    });
 }
 
 // event handlers for static elements
@@ -165,6 +181,11 @@ window.addEventListener("pointerup", function(e) { // if mouseup over another no
     initialShaderNodeConnectionPosition = [];
     initialShaderNodeConnectionSelectionPosition = [];
     selectedShaderNodeConnection = undefined;
+    if(e.target.className=="nodeWire") {
+
+    } else if(selectedShaderNodeConnectionWire) {
+        selectedShaderNodeConnectionWire.remove();
+    }
     selectedShaderNodeConnectionWire = undefined;
     console.warn(e.target.id);
 });
