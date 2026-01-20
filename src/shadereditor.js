@@ -1,3 +1,4 @@
+import { select } from "three/tsl";
 import { createPopup, getPopupHeader, getPopupCancelButton, getFlexContainer } from "./jakehui.js";
 
 const addNodeButtonId = "addNodeButton";
@@ -35,7 +36,7 @@ function createNewShader() {
 function addNewNodeToEditor(nodeType) {
     let shaderEditorPanel = getShaderEditorPanelElement();
     // let shaderNode = createPopup(shaderEditorPanel.offsetLeft + shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetTop + shaderEditorPanel.offsetHeight / 4, 300, 300);
-    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 4, 150, 200);
+    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 2, 150, 200);
     shaderNode.style.position="relative";
     let nodeContainerContent = getFlexContainer("300px", "column");
     shaderNode.style.background="white";
@@ -62,8 +63,8 @@ function addNewNodeToEditor(nodeType) {
             console.warn(initialShaderNodeConnectionPosition);
             console.warn(initialShaderNodeConnectionSelectionPosition);
             let newNodeWire = document.createElement("div");
-            newNodeWire.style.top = selectedShaderNodeConnection.style.top;
-            newNodeWire.style.left = selectedShaderNodeConnection.style.left;
+            newNodeWire.style.top = selectedShaderNodeConnection.offsetTop;
+            newNodeWire.style.left = selectedShaderNodeConnection.style.offsetLeft;
             newNodeWire.className="nodeWire";
             e.target.parentElement.appendChild(newNodeWire);
             selectedShaderNodeConnectionWire = newNodeWire;
@@ -141,7 +142,8 @@ function getNodeSelectionForm() {
 
 function moveSelectedShaderNode(pointerEvent) {
     let initialXOffset = initialShaderNodeSelectionPosition[0] - initialShaderNodePosition[0];
-    let initialYOffset = initialShaderNodeSelectionPosition[1] - initialShaderNodePosition[1];
+    let initialYOffset = initialShaderNodeSelectionPosition[1] - initialShaderNodePosition[1] + 50; // plus panel toolbar height since nodes are positioned relative
+    console.warn(`${pointerEvent.clientY} - ${getShaderEditorPanelElement().offsetTop} - ${initialYOffset}`)
 // need to do some funky tricks to get it to go under the other panels and initiate overflow in the workspace
     selectedShaderNode.style.left=`${(pointerEvent.clientX - getShaderEditorPanelElement().offsetLeft) - initialXOffset}px`;
     selectedShaderNode.style.top=`${(pointerEvent.clientY - getShaderEditorPanelElement().offsetTop) - initialYOffset}px`;
@@ -214,8 +216,17 @@ window.addEventListener("pointermove", function(e) {
     if(selectedShaderNode) {
         moveSelectedShaderNode(e);
     } else if(selectedShaderNodeConnection && selectedShaderNodeConnectionWire) {
-        selectedShaderNodeConnectionWire.style.width = e.clientX - initialShaderNodeConnectionSelectionPosition[0];
-        selectedShaderNodeConnectionWire.style.height = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
+        let newWidth = e.clientX - initialShaderNodeConnectionSelectionPosition[0];
+        let newHeight = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
+
+        if(newWidth > 0) {
+            selectedShaderNodeConnectionWire.style.width = newWidth
+            selectedShaderNodeConnectionWire.style.height = newHeight
+        } else { // moving left make left pos the dist from shader node
+            selectedShaderNodeConnectionWire.style.width = Math.abs(newWidth);
+            selectedShaderNodeConnectionWire.style.left = selectedShaderNodeConnectionWire.parentElement.style.left + newWidth;
+            selectedShaderNodeConnectionWire.style.height = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
+        }
         //console.warn(`${},${}`)
     }
 });
@@ -229,7 +240,7 @@ window.addEventListener("pointerup", function(e) { // if mouseup over another no
     initialShaderNodeConnectionSelectionPosition = [];
     selectedShaderNodeConnection = undefined;
     if(e.target.className=="nodeWire") {
-
+        // persist and update node data
     } else if(selectedShaderNodeConnectionWire) {
         selectedShaderNodeConnectionWire.remove();
     }
