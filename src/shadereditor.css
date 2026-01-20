@@ -38,7 +38,7 @@
 }
 
 .nodeWire {
-    position: relative;
+    position: absolute;
     border-right: 2px dashed red;
     border-top: 2px dashed red;
     min-height: 1px;

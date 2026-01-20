@@ -28,9 +28,10 @@ function getPopupCancelButton(popupId) {
 function getFlexContainer(width = "100%", direction = "row", justifyContent = "flex-start", alignItems = "center") {
     let flexContainer = document.createElement("div");
     flexContainer.style.width=width;
-    flexContainer.style.direction=direction;
+    flexContainer.style.flexDirection=direction;
     flexContainer.style.justifyContent=justifyContent;
     flexContainer.style.alignItems=alignItems;
+    flexContainer.style.display="flex";
     return flexContainer;
 }
 

@@ -35,18 +35,18 @@ function createNewShader() {
 function addNewNodeToEditor(nodeType) {
     let shaderEditorPanel = getShaderEditorPanelElement();
     // let shaderNode = createPopup(shaderEditorPanel.offsetLeft + shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetTop + shaderEditorPanel.offsetHeight / 4, 300, 300);
-    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 4, 75, 100);
+    let shaderNode = createPopup(shaderEditorPanel.offsetWidth / 2, shaderEditorPanel.offsetHeight / 4, 150, 200);
     shaderNode.style.position="relative";
     let nodeContainerContent = getFlexContainer("300px", "column");
     shaderNode.style.background="white";
     let nodeData = createNewNode(nodeType);
-    let nodeConnection = document.createElement("div");
-    nodeConnection.className="nodeConnection";
-    console.warn(shaderNode.offsetWidth);
-    nodeConnection.style.left=`${+(shaderNode.style.width.replace("px", ""))-5}px`;
-    shaderNode.appendChild(nodeConnection);
     shaders[selectedShaderIndex].nodes.push(nodeData);
-    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length}`;
+    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
+    nodeContainerContent.id=`nodeContent-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
+    if(nodeType == 3) {
+        let nodeContent = getMathForm(nodeContainerContent.id);
+        nodeContainerContent.appendChild(nodeContent);
+    }
     shaderNode.appendChild(nodeContainerContent);
     shaderEditorPanel.appendChild(shaderNode);
     shaderNode.addEventListener("pointerdown", function(e) {
@@ -147,18 +147,65 @@ function moveSelectedShaderNode(pointerEvent) {
     selectedShaderNode.style.top=`${(pointerEvent.clientY - getShaderEditorPanelElement().offsetTop) - initialYOffset}px`;
 }
 
-function getMathForm(nodeId) {
+function getMathForm(nodeContentContainerId) {
+    let mathOperationTypes = ['select math operation', 'add', 'subtract', 'divide', 'multiply', 'exponent', 'modulus', 'cosine',
+                              'sine', 'tangent', 'arccos', 'arcsin', 'arctan'];
     let formContainer = getFlexContainer(undefined, "column", "flex-start");
     let operationsInputContainer = getFlexContainer();
     let operationsInput = document.createElement("select");
     let operationsInputLabel = document.createElement("p");
     operationsInputContainer.appendChild(operationsInputLabel);
     operationsInputContainer.appendChild(operationsInput);
-    operationInputLabel.innerHTML="operation";
+    operationsInputLabel.innerHTML="operation";
+    for(let i = 0; i < mathOperationTypes.length; i++) {
+        let operationOption = document.createElement("option");
+        operationOption.innerHTML = mathOperationTypes[i];
+        operationOption.value = i;
+        operationsInput.appendChild(operationOption);
+    }
+    formContainer.appendChild(operationsInputContainer);
     let operationsContainer = getFlexContainer(undefined, "column", "flex-start");
+    formContainer.appendChild(operationsContainer);
+    operationsContainer.id=`${nodeContentContainerId}-operationsContainer`;
     operationsInput.addEventListener("change", function(e) {
         // update further inputs and outputs?
+        operationsContainer.innerHTML = "";
+        // build form based on operation
+        if(e.target.value == 1) { // addition
+            let nodeInputContainer1 = getFlexContainer();
+            let nodeInputContainer2 = getFlexContainer();
+            let nodeInput1Connection = document.createElement("div");
+            nodeInput1Connection.className="nodeConnection";
+            nodeInput1Connection.style.left = '-5px';
+            let aLabel = document.createElement("p");
+            aLabel.innerHTML = "A";
+            let aInput = document.createElement("input");
+            aInput.type = "number";
+            let nodeInput2Connection = document.createElement("div");
+            nodeInput2Connection.className="nodeConnection";
+            nodeInput2Connection.style.left = '-5px';
+            let bLabel = document.createElement("p");
+            bLabel.innerHTML = "B";
+            let bInput = document.createElement("input");
+            bInput.type = "number";
+            nodeInputContainer1.appendChild(nodeInput1Connection);
+            nodeInputContainer1.appendChild(aLabel);
+            nodeInputContainer1.appendChild(aInput);
+            nodeInputContainer2.appendChild(nodeInput2Connection);
+            nodeInputContainer2.appendChild(bLabel);
+            nodeInputContainer2.appendChild(bInput);
+            operationsContainer.appendChild(nodeInputContainer1);
+            operationsContainer.appendChild(nodeInputContainer2);
+        } else {
+
+        }
+        let resultNodeConnection = document.createElement("div");
+        resultNodeConnection.className="nodeConnection";
+        resultNodeConnection.style.right = '-5px';
+        operationsContainer.appendChild(resultNodeConnection);
     });
+
+    return formContainer;
 }
 
 // event handlers for static elements
