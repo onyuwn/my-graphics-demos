@@ -42,7 +42,7 @@ function addNewNodeToEditor(nodeType) {
     shaderNode.style.background="white";
     let nodeData = createNewNode(nodeType);
     shaders[selectedShaderIndex].nodes.push(nodeData);
-    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
+    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length-1}-${nodeType}`;
     nodeContainerContent.id=`nodeContent-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
     if(nodeType == 3) {
         let nodeContent = getMathForm(nodeContainerContent.id);
@@ -60,8 +60,6 @@ function addNewNodeToEditor(nodeType) {
             selectedShaderNodeConnection = e.target;
             initialShaderNodeConnectionSelectionPosition = [e.clientX, e.clientY];
             initialShaderNodeConnectionPosition = [e.target.getBoundingClientRect().x, e.target.getBoundingClientRect().y];
-            console.warn(initialShaderNodeConnectionPosition);
-            console.warn(initialShaderNodeConnectionSelectionPosition);
             let newNodeWire = document.createElement("div");
             newNodeWire.style.top = selectedShaderNodeConnection.offsetTop;
             newNodeWire.style.left = selectedShaderNodeConnection.style.offsetLeft;
@@ -76,7 +74,10 @@ function createNewNode(nodeType) {
     return {
         nodeType: nodeType,
         inputs: [], // input can either be manually set or take value of node
-        outputs: [],
+        output: {
+            type:"",
+            value: undefined
+        },
         position: {
             x: 0,
             y: 0
@@ -143,7 +144,7 @@ function getNodeSelectionForm() {
 function moveSelectedShaderNode(pointerEvent) {
     let initialXOffset = initialShaderNodeSelectionPosition[0] - initialShaderNodePosition[0];
     let initialYOffset = initialShaderNodeSelectionPosition[1] - initialShaderNodePosition[1] + 50; // plus panel toolbar height since nodes are positioned relative
-    console.warn(`${pointerEvent.clientY} - ${getShaderEditorPanelElement().offsetTop} - ${initialYOffset}`)
+    // console.warn(`${pointerEvent.clientY} - ${getShaderEditorPanelElement().offsetTop} - ${initialYOffset}`)
 // need to do some funky tricks to get it to go under the other panels and initiate overflow in the workspace
     selectedShaderNode.style.left=`${(pointerEvent.clientX - getShaderEditorPanelElement().offsetLeft) - initialXOffset}px`;
     selectedShaderNode.style.top=`${(pointerEvent.clientY - getShaderEditorPanelElement().offsetTop) - initialYOffset}px`;
@@ -174,6 +175,8 @@ function getMathForm(nodeContentContainerId) {
         operationsContainer.innerHTML = "";
         // build form based on operation
         if(e.target.value == 1) { // addition
+            let nodeObj = getNodeByElementId(nodeContentContainerId);
+            nodeObj.inputs = [{type: "number", value: 0}, {type: "number", value: 0}];
             let nodeInputContainer1 = getFlexContainer();
             let nodeInputContainer2 = getFlexContainer();
             let nodeInput1Connection = document.createElement("div");
@@ -210,6 +213,30 @@ function getMathForm(nodeContentContainerId) {
     return formContainer;
 }
 
+function getNodeByElementId(id) {
+    // parse id return node
+    let parts = id.split("-");
+    if(parts.length >= 3) {
+        let nodeIdx = parts[1]; 
+        let nodeConnectionIdx = parts[1]; 
+        return nodes[nodeIdx];
+    } else {
+        return undefined;
+    }
+}
+
+function getNodeInputByElementId(id) {
+    // parse id return node
+    let parts = id.split("-");
+    if(parts.length >= 3) {
+        let nodeIdx = parts[1]; 
+        let nodeConnectionIdx = parts[1]; 
+        return nodes[nodeIdx].inputs[nodeConnectionIdx];
+    } else {
+        return undefined;
+    }
+}
+
 // event handlers for static elements
 document.getElementById(addNodeButtonId).addEventListener("click", showNodeSelectionPopup);
 window.addEventListener("pointermove", function(e) {
@@ -227,25 +254,31 @@ window.addEventListener("pointermove", function(e) {
             selectedShaderNodeConnectionWire.style.left = selectedShaderNodeConnectionWire.parentElement.style.left + newWidth;
             selectedShaderNodeConnectionWire.style.height = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
         }
-        //console.warn(`${},${}`)
     }
 });
 
 window.addEventListener("pointerup", function(e) { // if mouseup over another nodeConnection, complete, else terminate and destroy wire/
-    console.warn("resetting selected node");
+    if(e.target.className=="nodeConnection") {
+        // persist and update node data
+        console.warn("pointer up on:");
+        console.warn(e.target.id);
+        console.warn(e.target.parentElement.id);
+        let curSelectedOutput = getNodeByElementId(selectedShaderNodeConnection.parentElement.id);
+        let selectedNodeInput = getNodeInputByElementId(e.target.parentElement.id);
+        if(selectedNodeInput.type == curSelectedOutput.output.type) {
+            selectedNodeInput.value = curSelectedOutput.output.value; // todo else show warning type mismatch
+        }
+        selectedNodeInput.cs
+        selectedShaderNodeConnectionWire = undefined;
+    } else if(selectedShaderNodeConnectionWire) {
+        selectedShaderNodeConnectionWire.remove();
+    }
     selectedShaderNode = undefined;
     initialShaderNodeSelectionPosition = [];
     initialShaderNodePosition = []
     initialShaderNodeConnectionPosition = [];
     initialShaderNodeConnectionSelectionPosition = [];
     selectedShaderNodeConnection = undefined;
-    if(e.target.className=="nodeWire") {
-        // persist and update node data
-    } else if(selectedShaderNodeConnectionWire) {
-        selectedShaderNodeConnectionWire.remove();
-    }
-    selectedShaderNodeConnectionWire = undefined;
-    console.warn(e.target.id);
 });
 
 document.getElementById(canvasHeightInputId).addEventListener("change", function(e) {
