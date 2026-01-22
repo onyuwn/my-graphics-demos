@@ -60,10 +60,14 @@ function addNewNodeToEditor(nodeType) {
             selectedShaderNodeConnection = e.target;
             initialShaderNodeConnectionSelectionPosition = [e.clientX, e.clientY];
             initialShaderNodeConnectionPosition = [e.target.getBoundingClientRect().x, e.target.getBoundingClientRect().y];
-            let newNodeWire = document.createElement("div");
-            newNodeWire.style.top = selectedShaderNodeConnection.offsetTop;
-            newNodeWire.style.left = selectedShaderNodeConnection.style.offsetLeft;
-            newNodeWire.className="nodeWire";
+            let newNodeWire = document.createElementNS('http://www.w3.org/2000/svg', "svg");
+            let nodeWirePath = document.createElementNS('http://www.w3.org/2000/svg', "path");
+            newNodeWire.appendChild(nodeWirePath);
+            newNodeWire.style.position = "absolute";
+            // newNodeWire.style.left = getShaderEditorPanelElement().offsetLeft;
+            // newNodeWire.style.top = getShaderEditorPanelElement().offsetTop;
+            newNodeWire.style.width = getShaderEditorPanelElement().offsetWidth;
+            newNodeWire.style.height = getShaderEditorPanelElement().offsetHeight;
             e.target.parentElement.appendChild(newNodeWire);
             selectedShaderNodeConnectionWire = newNodeWire;
         }
@@ -217,9 +221,11 @@ function getNodeByElementId(id) {
     // parse id return node
     let parts = id.split("-");
     if(parts.length >= 3) {
-        let nodeIdx = parts[1]; 
-        let nodeConnectionIdx = parts[1]; 
-        return nodes[nodeIdx];
+        let nodeIdx = +(parts[1]) - 1; 
+        let nodeConnectionIdx = +(parts[2]) - 1;
+        console.warn(shaders[selectedShaderIndex].nodes);
+        console.warn(parts);
+        return shaders[selectedShaderIndex].nodes[nodeIdx];
     } else {
         return undefined;
     }
@@ -229,9 +235,9 @@ function getNodeInputByElementId(id) {
     // parse id return node
     let parts = id.split("-");
     if(parts.length >= 3) {
-        let nodeIdx = parts[1]; 
-        let nodeConnectionIdx = parts[1]; 
-        return nodes[nodeIdx].inputs[nodeConnectionIdx];
+        let nodeIdx = +(parts[1]) - 1; 
+        let nodeConnectionIdx = +(parts[2]) - 1;
+        return shaders[selectedShaderIndex].nodes[nodeIdx].inputs[nodeConnectionIdx];
     } else {
         return undefined;
     }
@@ -245,15 +251,18 @@ window.addEventListener("pointermove", function(e) {
     } else if(selectedShaderNodeConnection && selectedShaderNodeConnectionWire) {
         let newWidth = e.clientX - initialShaderNodeConnectionSelectionPosition[0];
         let newHeight = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
-
-        if(newWidth > 0) {
-            selectedShaderNodeConnectionWire.style.width = newWidth
-            selectedShaderNodeConnectionWire.style.height = newHeight
-        } else { // moving left make left pos the dist from shader node
-            selectedShaderNodeConnectionWire.style.width = Math.abs(newWidth);
-            selectedShaderNodeConnectionWire.style.left = selectedShaderNodeConnectionWire.parentElement.style.left + newWidth;
-            selectedShaderNodeConnectionWire.style.height = e.clientY - initialShaderNodeConnectionSelectionPosition[1];
-        }
+        let viewBox =`0 0 ${getShaderEditorPanelElement().offsetWidth} ${getShaderEditorPanelElement().offsetHeight}`;
+        selectedShaderNodeConnectionWire.setAttribute('viewBox', viewBox);
+        let path = selectedShaderNodeConnectionWire.children.item(0);
+        path.setAttribute('stroke', 'red');
+        path.setAttribute('stroke-width', '20');
+        let d = `
+            M ${initialShaderNodeConnectionSelectionPosition[0] - getShaderEditorPanelElement().offsetLeft},${initialShaderNodeConnectionSelectionPosition[1] - getShaderEditorPanelElement().offsetTop}
+            L ${e.clientX - getShaderEditorPanelElement().offsetLeft},${e.clientY - getShaderEditorPanelElement().offsetTop}`;
+        // d = `
+        // M 5,5 
+        // L 5,5`;
+        path.setAttribute('d', d)
     }
 });
 
@@ -268,7 +277,6 @@ window.addEventListener("pointerup", function(e) { // if mouseup over another no
         if(selectedNodeInput.type == curSelectedOutput.output.type) {
             selectedNodeInput.value = curSelectedOutput.output.value; // todo else show warning type mismatch
         }
-        selectedNodeInput.cs
         selectedShaderNodeConnectionWire = undefined;
     } else if(selectedShaderNodeConnectionWire) {
         selectedShaderNodeConnectionWire.remove();
