@@ -42,7 +42,7 @@ function addNewNodeToEditor(nodeType) {
     shaderNode.style.background="white";
     let nodeData = createNewNode(nodeType);
     shaders[selectedShaderIndex].nodes.push(nodeData);
-    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length-1}-${nodeType}`;
+    shaderNode.id=`node-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
     nodeContainerContent.id=`nodeContent-${shaders[selectedShaderIndex].nodes.length}-${nodeType}`;
     if(nodeType == 3) {
         let nodeContent = getMathForm(nodeContainerContent.id);
@@ -51,7 +51,7 @@ function addNewNodeToEditor(nodeType) {
     shaderNode.appendChild(nodeContainerContent);
     shaderEditorPanel.appendChild(shaderNode);
     shaderNode.addEventListener("pointerdown", function(e) {
-        if(e.target.id.includes("node")) {
+        if(e.target.id.includes("node") && !e.target.id.includes("nodeConnection")) {
             selectedShaderNode = e.target;
             initialShaderNodeSelectionPosition = [e.clientX, e.clientY];
             initialShaderNodePosition = [e.target.getBoundingClientRect().x, e.target.getBoundingClientRect().y];
@@ -64,11 +64,12 @@ function addNewNodeToEditor(nodeType) {
             let nodeWirePath = document.createElementNS('http://www.w3.org/2000/svg', "path");
             newNodeWire.appendChild(nodeWirePath);
             newNodeWire.style.position = "absolute";
-            // newNodeWire.style.left = getShaderEditorPanelElement().offsetLeft;
-            // newNodeWire.style.top = getShaderEditorPanelElement().offsetTop;
+            newNodeWire.style.left = getShaderEditorPanelElement().offsetLeft;
+            newNodeWire.style.top = getShaderEditorPanelElement().offsetTop;
             newNodeWire.style.width = getShaderEditorPanelElement().offsetWidth;
             newNodeWire.style.height = getShaderEditorPanelElement().offsetHeight;
-            e.target.parentElement.appendChild(newNodeWire);
+            newNodeWire.style.pointerEvents="none";
+            getShaderEditorPanelElement().appendChild(newNodeWire); // todo: will probably have to store wire start and end points or positions of the endpoint nodes so that global positin can be recalculated when nodes ar moved and such
             selectedShaderNodeConnectionWire = newNodeWire;
         }
     });
@@ -174,6 +175,7 @@ function getMathForm(nodeContentContainerId) {
     let operationsContainer = getFlexContainer(undefined, "column", "flex-start");
     formContainer.appendChild(operationsContainer);
     operationsContainer.id=`${nodeContentContainerId}-operationsContainer`;
+    let nodeIdx = nodeContentContainerId.split("-")[1];
     operationsInput.addEventListener("change", function(e) {
         // update further inputs and outputs?
         operationsContainer.innerHTML = "";
@@ -186,6 +188,7 @@ function getMathForm(nodeContentContainerId) {
             let nodeInput1Connection = document.createElement("div");
             nodeInput1Connection.className="nodeConnection";
             nodeInput1Connection.style.left = '-5px';
+            nodeInput1Connection.id = `nodeConnection-${nodeIdx}-1`;
             let aLabel = document.createElement("p");
             aLabel.innerHTML = "A";
             let aInput = document.createElement("input");
@@ -193,6 +196,7 @@ function getMathForm(nodeContentContainerId) {
             let nodeInput2Connection = document.createElement("div");
             nodeInput2Connection.className="nodeConnection";
             nodeInput2Connection.style.left = '-5px';
+            nodeInput2Connection.id = `nodeConnection-${nodeIdx}-2`;
             let bLabel = document.createElement("p");
             bLabel.innerHTML = "B";
             let bInput = document.createElement("input");
@@ -210,6 +214,7 @@ function getMathForm(nodeContentContainerId) {
         }
         let resultNodeConnection = document.createElement("div");
         resultNodeConnection.className="nodeConnection";
+        resultNodeConnection.id = `nodeConnection-${nodeIdx}-result`;
         resultNodeConnection.style.right = '-5px';
         operationsContainer.appendChild(resultNodeConnection);
     });
@@ -224,7 +229,6 @@ function getNodeByElementId(id) {
         let nodeIdx = +(parts[1]) - 1; 
         let nodeConnectionIdx = +(parts[2]) - 1;
         console.warn(shaders[selectedShaderIndex].nodes);
-        console.warn(parts);
         return shaders[selectedShaderIndex].nodes[nodeIdx];
     } else {
         return undefined;
@@ -237,6 +241,8 @@ function getNodeInputByElementId(id) {
     if(parts.length >= 3) {
         let nodeIdx = +(parts[1]) - 1; 
         let nodeConnectionIdx = +(parts[2]) - 1;
+        console.warn(shaders[selectedShaderIndex].nodes);
+        console.warn(`${nodeIdx} ${nodeConnectionIdx}`);
         return shaders[selectedShaderIndex].nodes[nodeIdx].inputs[nodeConnectionIdx];
     } else {
         return undefined;
@@ -247,6 +253,7 @@ function getNodeInputByElementId(id) {
 document.getElementById(addNodeButtonId).addEventListener("click", showNodeSelectionPopup);
 window.addEventListener("pointermove", function(e) {
     if(selectedShaderNode) {
+        console.warn("moving node")
         moveSelectedShaderNode(e);
     } else if(selectedShaderNodeConnection && selectedShaderNodeConnectionWire) {
         let newWidth = e.clientX - initialShaderNodeConnectionSelectionPosition[0];
@@ -270,10 +277,10 @@ window.addEventListener("pointerup", function(e) { // if mouseup over another no
     if(e.target.className=="nodeConnection") {
         // persist and update node data
         console.warn("pointer up on:");
-        console.warn(e.target.id);
-        console.warn(e.target.parentElement.id);
+        console.warn(selectedShaderNodeConnection.parentElement.id);
+        console.warn(e.target.parentElement.parentElement.id);
         let curSelectedOutput = getNodeByElementId(selectedShaderNodeConnection.parentElement.id);
-        let selectedNodeInput = getNodeInputByElementId(e.target.parentElement.id);
+        let selectedNodeInput = getNodeInputByElementId(e.target.id);
         if(selectedNodeInput.type == curSelectedOutput.output.type) {
             selectedNodeInput.value = curSelectedOutput.output.value; // todo else show warning type mismatch
         }
