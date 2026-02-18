@@ -283,6 +283,8 @@ window.addEventListener("pointerup", function(e) { // if mouseup over another no
         let selectedNodeInput = getNodeInputByElementId(e.target.id);
         if(selectedNodeInput.type == curSelectedOutput.output.type) {
             selectedNodeInput.value = curSelectedOutput.output.value; // todo else show warning type mismatch
+            // update input values (visual)
+            // keep in sync by hooking up change events and firing change events?
         }
         selectedShaderNodeConnectionWire = undefined;
     } else if(selectedShaderNodeConnectionWire) {

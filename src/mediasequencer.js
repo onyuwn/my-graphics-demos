@@ -34,6 +34,7 @@ const fragmentShaderSource = `
 
     uniform float fadeInTransitionTime;
     uniform int fadeInTransitionType;
+    uniform int clipEffectControlAlpha;
 
     uniform int clipEffect;
     uniform float clipEffectIntensity;
@@ -215,7 +216,11 @@ const fragmentShaderSource = `
                 float flicker = cos(time * (25.0 * clipEffectIntensity));
                 if(flicker > 0.0) {
                     vec4 diffuse = texture2D(uSampler,uv);
-                    gl_FragColor = vec4(1.0 - diffuse.r, 1.0 - diffuse.g, 1.0 - diffuse.b, diffuse.a);
+                    if(clipEffectControlAlpha > 0) {
+                        gl_FragColor = vec4(1.0 - diffuse.r, 1.0 - diffuse.g, 1.0 - diffuse.b, 0.0);
+                    } else {
+                        gl_FragColor = vec4(1.0 - diffuse.r, 1.0 - diffuse.g, 1.0 - diffuse.b, diffuse.a);
+                    }
                 }
             } else if(clipEffect == 2) { // ripple
                 vec2 cPos = -1.0 + 2.0 * uv;
@@ -403,7 +408,8 @@ function main() {
             fractalX: gl.getUniformLocation(shaderProgram, "fractalX"),
             fractalY: gl.getUniformLocation(shaderProgram, "fractalY"),
             fractalInitialZoom: gl.getUniformLocation(shaderProgram, "fractalInitialZoom"),
-            invertFractal: gl.getUniformLocation(shaderProgram, "invertFractal")
+            invertFractal: gl.getUniformLocation(shaderProgram, "invertFractal"),
+            clipEffectControlAlpha: gl.getUniformLocation(shaderProgram, "clipEffectControlAlpha")
         }
     }
     const buffers = initBuffers(gl);
@@ -600,6 +606,7 @@ function addItemToSequence(file, texture, imgData, layer) {
         fractalX: -.95,
         fractalY: -.25,
         invertFractal: false,
+        clipEffectControlAlpha: false,
         clipLayer: layer + 1,
         clipEffect: 0,
         clipEffectIntensity: 1.0,
@@ -1221,8 +1228,12 @@ function showClipEffectParameters() {
         return;
     }
     let intensityInputLabel = document.createElement("p");
+    let effectToggleInputLabel = document.createElement("p");
     intensityInputLabel.innerHTML = "Effect Intensity";
+    effectToggleInputLabel.innerHTML = "Control Alpha?"; // for flicker and ripple only
     let slider = document.createElement("input");
+    let toggleInput = document.createElement("input");
+    toggleInput.type="checkbox";
     slider.id="clipEffectIntensitySlider";
     slider.type = "range";
     slider.value = selectedSequenceItem.clipEffectIntensity;
@@ -1234,13 +1245,19 @@ function showClipEffectParameters() {
         numberInput.value = +(e.target.value);
         updateClipIntensity(+(e.target.value));
     });
+    toggleInput.addEventListener("change", function(e) {
+        console.warn(e.target.checked);
+        selectedSequenceItem.clipEffectControlAlpha = e.target.checked;
+    });
     let numberInput = document.createElement("input");
     numberInput.id = "clipEffectIntensityInput";
     numberInput.type = "number";
     numberInput.value = selectedSequenceItem.clipEffectIntensity;
+    toggleInput.checked = selectedSequenceItem.clipEffectControlAlpha;
 
     paramSection.appendChild(intensityInputLabel);
     paramSection.appendChild(slider);
+    paramSection.appendChild(toggleInput);
     paramSection.appendChild(numberInput);
 }
 
