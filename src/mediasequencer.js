@@ -228,6 +228,9 @@ const fragmentShaderSource = `
                 float cLength = length(cPos);
                 vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03 * clipEffectIntensity;
                 gl_FragColor = texture2D(uSampler,newUv);
+                if(clipEffectControlAlpha > 0) {
+                    gl_FragColor.a = 1.0 - cos(cLength*12.0-time*4.0) * 0.25 * clipEffectIntensity;
+                }
             } else if(clipEffect == 3) {
                 gl_FragColor = vec4(sharpenKernel(uv, clipEffectIntensity), 1.0);
             } else if(clipEffect == 4) {
@@ -1224,6 +1227,8 @@ function hideClipEffectParameters() {
 
 function showClipEffectParameters() {
     let paramSection = document.getElementById("clipEffectParameterSection");
+    paramSection.style.display = "flex";
+    paramSection.style.flexDirection="column";
     if(paramSection.innerHTML) {
         return;
     }
@@ -1231,6 +1236,10 @@ function showClipEffectParameters() {
     let effectToggleInputLabel = document.createElement("p");
     intensityInputLabel.innerHTML = "Effect Intensity";
     effectToggleInputLabel.innerHTML = "Control Alpha?"; // for flicker and ripple only
+    let intensityContainer = document.createElement("div");
+    intensityContainer.style.display = "flex";
+    let toggleAlphaContainer = document.createElement("div");
+    toggleAlphaContainer.style.display = "flex";
     let slider = document.createElement("input");
     let toggleInput = document.createElement("input");
     toggleInput.type="checkbox";
@@ -1255,10 +1264,13 @@ function showClipEffectParameters() {
     numberInput.value = selectedSequenceItem.clipEffectIntensity;
     toggleInput.checked = selectedSequenceItem.clipEffectControlAlpha;
 
-    paramSection.appendChild(intensityInputLabel);
-    paramSection.appendChild(slider);
-    paramSection.appendChild(toggleInput);
-    paramSection.appendChild(numberInput);
+    intensityContainer.appendChild(intensityInputLabel);
+    intensityContainer.appendChild(slider);
+    intensityContainer.appendChild(numberInput);
+    toggleAlphaContainer.appendChild(effectToggleInputLabel);
+    toggleAlphaContainer.appendChild(toggleInput);
+    paramSection.appendChild(intensityContainer);
+    paramSection.appendChild(toggleAlphaContainer);
 }
 
 function updateClipIntensity(clipIntensity) {
