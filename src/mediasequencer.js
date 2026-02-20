@@ -180,6 +180,48 @@ const fragmentShaderSource = `
                 vec4 mandelBrotColor = mandelbrot(rotateUv(uv, time * .5, vec2(.5)), zoom * t, vec2(fractalX, fractalY), t);
                 vec4 diffuse = texture2D(uSampler, rotateUv(uv, time * .5, vec2(.5)));
                 gl_FragColor = mandelBrotColor * diffuse;
+            } else if(transitionType == 7) { // pagecurl
+                float aspect = 1.0;
+                float radius = .1;
+                float pi = 3.141592;
+                float t = 1.0 - ((time - transitionStart) / transitionTime);
+                vec2 curlDir = normalize(vec2(1.0));
+                //vec2 origin = clamp(vec2(t) - curlDir * t / curlDir.x, 0., 1.);
+                vec2 origin = vec2(0.0);
+                float curlDist = length(vec2(t) - origin);
+                
+                if (curlDir.x < 0.)
+                {
+
+                    curlDist = length(t - origin);
+                }
+              
+                float proj = dot(uv - origin, curlDir);
+                float dist = proj - curlDist;
+                
+                vec2 linePoint = uv - dist * curlDir;
+                
+                if (dist > radius) 
+                {
+                    gl_FragColor = vec4(0.0);
+                    gl_FragColor.rgb *= pow(clamp(dist - radius, 0., 1.) * 1.5, .2);
+                }
+                else if (dist >= 0.)
+                {
+                    // map to cylinder point
+                    float theta = asin(dist / radius);
+                    vec2 p2 = linePoint + curlDir * (pi - theta) * radius;
+                    vec2 p1 = linePoint + curlDir * theta * radius;
+                    uv = (p2.x <= aspect && p2.y <= 1. && p2.x > 0. && p2.y > 0.) ? p2 : p1;
+                    gl_FragColor = texture2D(uSampler, uv * vec2(1. / aspect, 1.));
+                    gl_FragColor.rgb *= pow(clamp((radius - dist) / radius, 0., 1.), .2);
+                }
+                else 
+                {
+                    vec2 p = linePoint + curlDir * (abs(dist) + pi * radius);
+                    uv = (p.x <= aspect && p.y <= 1. && p.x > 0. && p.y > 0.) ? p : uv;
+                    gl_FragColor = texture2D(uSampler, uv * vec2(1. / aspect, 1.));
+                }
             }
         } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0 && time <= sequenceItemStartTime + fadeInTransitionTime) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
