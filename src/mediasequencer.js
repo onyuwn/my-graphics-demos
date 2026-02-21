@@ -43,6 +43,9 @@ const fragmentShaderSource = `
     uniform float fractalY;
     uniform float fractalInitialZoom;
 
+    uniform float pageCurlRadius;
+    uniform float pageCurlDir;
+
     uniform sampler2D uSampler;
 
     vec2 random2( vec2 p ) {
@@ -182,10 +185,24 @@ const fragmentShaderSource = `
                 gl_FragColor = mandelBrotColor * diffuse;
             } else if(transitionType == 7) { // pagecurl
                 float aspect = 1.0;
-                float radius = .1;
+                float radius = (pageCurlRadius > 0.0) ? pageCurlRadius : .1;
                 float pi = 3.141592;
                 float t = 1.0 - ((time - transitionStart) / transitionTime);
-                vec2 curlDir = normalize(vec2(1.0));
+                //vec2 curlDir = normalize(vec2(1.0));
+
+                float xComponent = cos(pageCurlDir) * 1.141;
+                float yComponent = sin(pageCurlDir) * 1.141;
+                vec2 curlDir = vec2(1.0);
+
+                if(xComponent >= 0.0 && yComponent >= 0.0) {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                } else if(xComponent < 0.0 && yComponent >= 0.0) {
+                    curlDir = normalize(vec2(yComponent, xComponent));
+                } else if(xComponent >= 0.0 && yComponent < 0.0) {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                } else {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                }
                 //vec2 origin = clamp(vec2(t) - curlDir * t / curlDir.x, 0., 1.);
                 vec2 origin = vec2(0.0);
                 float curlDist = length(vec2(t) - origin);
@@ -454,7 +471,9 @@ function main() {
             fractalY: gl.getUniformLocation(shaderProgram, "fractalY"),
             fractalInitialZoom: gl.getUniformLocation(shaderProgram, "fractalInitialZoom"),
             invertFractal: gl.getUniformLocation(shaderProgram, "invertFractal"),
-            clipEffectControlAlpha: gl.getUniformLocation(shaderProgram, "clipEffectControlAlpha")
+            clipEffectControlAlpha: gl.getUniformLocation(shaderProgram, "clipEffectControlAlpha"),
+            pageCurlRadius: gl.getUniformLocation(shaderProgram, "pageCurlRadius"),
+            pageCurlDir: gl.getUniformLocation(shaderProgram, "pageCurlDir")
         }
     }
     const buffers = initBuffers(gl);
@@ -480,6 +499,8 @@ function main() {
                         fractalX: -.95,
                         fractalY: -.25,
                         invertFractal: false,
+                        pageCurlDir: 45,
+                        pageCurlRadius: .1,
                          clipType:"image"});
     updateTimeline();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -657,7 +678,9 @@ function addItemToSequence(file, texture, imgData, layer) {
         clipEffectIntensity: 1.0,
         fadeInTransitionType: 0,
         fadeInTransitionTime: 1,
-        clipType: "image" // can be image or gap
+        clipType: "image", // can be image or gap
+        pageCurlDir: 45,
+        pageCurlRadius: .1
     };
 
     sequence[layer].push(
@@ -1087,6 +1110,36 @@ function showTransitionStyleSection(transitionType) {
         fadeContainer.appendChild(inputLabel);
         fadeContainer.appendChild(fadeTypeInput);
         transitionStyleSection.appendChild(fadeContainer);
+    } else if(transitionType == 7) {
+        let curlRadiusInputContainer = document.createElement("div");
+        let curlDirectionInputContainer = document.createElement("div");
+        let curlRadiusInputLabel = document.createElement("p");
+        let curlDirInputLabel = document.createElement("p");
+        curlRadiusInputLabel.innerHTML="Curl radius";
+        curlDirInputLabel.innerHTML="Curl direction"
+        let curlRadiusInput = document.createElement("input");
+        let curlDirInput = document.createElement("input");
+        curlRadiusInput.type = "number";
+        curlDirInput.type = "number";
+        curlRadiusInput.addEventListener("change", function(e) {
+            selectedSequenceItem.pageCurlRadius = +(e.target.value);
+        });
+        curlDirInput.addEventListener("change", function(e) {
+            selectedSequenceItem.pageCurlDir = +(e.target.value) * (Math.PI / 180.0);
+        })
+        curlRadiusInputContainer.appendChild(curlRadiusInputLabel);
+        curlRadiusInputContainer.appendChild(curlRadiusInput);
+        curlDirectionInputContainer.appendChild(curlDirInputLabel);
+        curlDirectionInputContainer.appendChild(curlDirInput);
+        curlRadiusInputContainer.style.display = "flex";
+        curlDirectionInputContainer.style.display = "flex";
+        transitionStyleSection.appendChild(curlRadiusInputContainer);
+        transitionStyleSection.appendChild(curlDirectionInputContainer);
+        transitionStyleSection.style.display="flex";
+        transitionStyleSection.style.flexDirection="column";
+        transitionStyleSection.style.marginLeft="5px";
+        curlDirInput.value = selectedSequenceItem.pageCurlDir;
+        curlRadiusInput.value = selectedSequenceItem.pageCurlRadius;
     }
 }
 

@@ -71,6 +71,8 @@ function drawPlane(gl, projection, programInfo, buffers, position, sequenceItem,
     gl.uniform1f(programInfo.uniformLocations.fractalInitialZoom, sequenceItem.fractalInitialZoom);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemLength, sequenceItem.length);
     gl.uniform1f(programInfo.uniformLocations.sequenceItemStartTime, sequenceItem.startTime);
+    gl.uniform1f(programInfo.uniformLocations.pageCurlRadius, sequenceItem.pageCurlRadius);
+    gl.uniform1f(programInfo.uniformLocations.pageCurlDir, sequenceItem.pageCurlDir);
     if(sequenceItem.colorThreshold && sequenceItem.colorThreshold.length == 3) {
         gl.uniform3f(programInfo.uniformLocations.colorThreshold, sequenceItem.colorThreshold[0], sequenceItem.colorThreshold[1], sequenceItem.colorThreshold[2]);
     }
