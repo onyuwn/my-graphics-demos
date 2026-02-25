@@ -98,13 +98,13 @@ h1 {
     border-image: url("/woodborder.png")150;
     border-image-width: 30px;
     /* //padding: 30px; */
-    overflow: auto;
+    max-width: 50vw;
 }
 
 #sequencerTimeline {
     align-items: start;
     overflow: auto;
-    width: calc(75% - 5px);
+    width: 100%;
     height: 200px;
     max-height: 500px;
 }
@@ -121,6 +121,7 @@ h1 {
     width: auto;
     min-height: 75px;
     padding:10px;
+    width: 1000px;
 }
 
 #exportProgressBar {
@@ -131,7 +132,7 @@ h1 {
 
 #sequencerRoot, #fractalViewerRoot {
     display: grid;
-    grid-template-rows: 3fr auto auto;
+    grid-template-rows: 400px 75px 55px;
     width: 75%;
     height: 600px;
     background-image: url("/my-graphics-demos/uipamnel1.png") !important;
@@ -161,7 +162,7 @@ h1 {
 }
 
 #viewportContainer {
-    height: calc(100% - 60px);
+    height: calc(100% - 75px);
 }
 
 #viewport {
@@ -208,11 +209,9 @@ h1 {
     font-family: "angelicpeace";
     position: absolute;
     top:7vh;
-    left:calc(100% - 20vw);
+    /* left:50%; */
     /* transform: translate(-50%, -50%); */
     background-image:url("/chalkboard.png");
-    width: 10vw;
-    height: 15vh;
     display: none;
     z-index: 10;
     border: 10px solid white;
@@ -254,7 +253,8 @@ h1 {
 }
 
 .sequenceThumbnail {
-    width: 50px;
+    width: 30px;
+    height: 30px;
     user-select: none;
 }
 
@@ -265,7 +265,6 @@ h1 {
     color:yellow;
     overflow: hidden;
     white-space: nowrap;
-    text-overflow: ellipsis;
     max-width: 50px;
     user-select: none;
 }
@@ -319,9 +318,11 @@ h1 {
     }
 
     #sequencerTimeline {
-        width: 100%;
-        max-width: calc(100% - 60px);
+        align-items: start;
         overflow: auto;
+        width: 100%;
+        height: 200px;
+        max-height: 500px;
     }
 
     #sequencerRoot, #fractalViewerRoot {
@@ -345,8 +346,8 @@ h1 {
         width: 70%;
     }
 
-    #viewport, #sequenceTimerContainer {
-        max-width: calc(100vw - 60px);
+    #viewport {
+        max-width: calc(100vw - 75px);
         overflow: auto;
     }
 
@@ -359,9 +360,8 @@ h1 {
         margin-left: 50px !important;
     }
 
-    .smallMessage {
-        width: 25vw;
-        height: 15vh;
+    .miniPost {
+        max-width: calc(100vw - 75px);
     }
 }
 
@@ -417,9 +417,9 @@ h1 {
 }
 
 #timelineRuler {
-    position:sticky;
-    background-color: yellow;
+    background: url("/chalkboard.png");
     width: 100%;
+    height: 25px;
 }
 
 .sequenceTimelineRulerTick {
@@ -446,7 +446,7 @@ h1 {
     /* box-shadow: inset 0px 0px 5px 5px rgb(161, 161, 161); */
 }
 
-#sequencerTimeline>:nth-child(even):not(:nth-child(2)) {
+#sequencerTimeline>:nth-child(even) {
     /* box-shadow: inset 0px 0px 5px 5px rgb(131, 131, 131); */
     border-top:2px solid rgb(169, 78, 255);
     background-image:url("/ceiling1.png");
@@ -540,14 +540,14 @@ input[type="number"] {
 
 #sequenceTimer {
     display: flex;
-    width: 50%;
+    width: 100%;
     justify-content: center;
     align-items: center;
     padding:1px;
     background-image:url('/kitchenfloor2.png');
 }
 
-.sequenceInfoItem select {
+.sequenceInfoItem select, .renderSettingsItem select {
     background-image:url('/mattresstx.png');
     font-family: "angelicpeace";
     font-size: 24px;

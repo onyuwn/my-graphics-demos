@@ -1,6 +1,7 @@
 import { initBuffers } from "./initbuffers.js";
 import { drawScene } from "./drawscene.js";
 import GIF from "gif.js.optimized";
+import { read } from "three/examples/jsm/libs/ktx-parse.module.js";
 
 const MAX_LAYERS = 4;
 
@@ -242,25 +243,26 @@ const fragmentShaderSource = `
             }
         } else if(time >= sequenceItemStartTime && fadeInTransitionType > 0 && fadeInTransitionTime > 0.0 && time <= sequenceItemStartTime + fadeInTransitionTime) {
             float fadeInEnd = sequenceItemStartTime + fadeInTransitionTime;
+            float t = (time - sequenceItemStartTime) / (fadeInTransitionTime);
             if(fadeInTransitionType == 1) {
-                gl_FragColor.a = time / fadeInEnd;
+                gl_FragColor.a = (time - sequenceItemStartTime) / (fadeInTransitionTime);
             } else if(fadeInTransitionType == 2) {
-                gl_FragColor *= (random2(vTextureCoord + time).x * (time / fadeInEnd));
+                gl_FragColor *= (random2(vTextureCoord + time).x * t);
             } else if(fadeInTransitionType == 3 && (time / fadeInEnd) < 1.0) { // not sure why minus a quatrter
                 vec2 cPos = -1.0 + 2.0 * uv;
                 // distance of current pixel from center
                 float cLength = length(cPos);
                 vec2 newUv = uv+(cPos/cLength)*cos(cLength*12.0-time*4.0) * 0.03;
                 gl_FragColor = texture2D(uSampler,newUv);
-                gl_FragColor.a = (time / fadeInEnd);
+                gl_FragColor.a = t;
             } else if(fadeInTransitionType == 4) { // erase color increase threshold over time until black
                 vec4 diffuse = texture2D(uSampler,uv);
                 float rDiff = abs(diffuse.r - fadeInColorThreshold.r);
                 float gDiff = abs(diffuse.g - fadeInColorThreshold.g);
                 float bDiff = abs(diffuse.b - fadeInColorThreshold.b);
-                float rThreshold = 1.0 - (time / fadeInEnd);
-                float gThreshold = 1.0 - (time / fadeInEnd);
-                float bThreshold = 1.0 - (time / fadeInEnd);
+                float rThreshold = 1.0 - t;
+                float gThreshold = 1.0 - t;
+                float bThreshold = 1.0 - t;
                 if(rDiff < rThreshold && gDiff < gThreshold && bDiff < bThreshold) {
                     discard;
                 } else {
@@ -268,7 +270,7 @@ const fragmentShaderSource = `
                 }  
             } else if(fadeInTransitionType == 5) {
                 vec4 diffuse = texture2D(uSampler,uv);
-                gl_FragColor = mix(vec4(1.0,1.0,1.0,1.0), diffuse, (time / fadeInEnd));
+                gl_FragColor = mix(vec4(1.0,1.0,1.0,1.0), diffuse, t);
             }
         } else if(clipEffect > 0) {
             if(clipEffect == 1) {
@@ -305,7 +307,6 @@ const fragmentShaderSource = `
                 gl_FragColor = diffuse;
             }
         }
-        //gl_FragColor.a = time;
     }
 `;
 
@@ -426,7 +427,7 @@ let outGif = new GIF({
 
 let frameRate = 15;
 
-function main() {
+async function main() {
     const canvas = document.querySelector("#gl-canvas");
     const gl = canvas.getContext("webgl");
     glContext = gl;
@@ -486,33 +487,54 @@ function main() {
     //                      id: "1-0", transitionType: 0, transitionTime: 1.0, clipLayer: 1,
     //                      fadeInTransitionType: 0,
     //                      fadeInTransitionTime: 0});
-    sequence[0].push({name:"test2",
-                         texture:texture2,
-                         startTime:0,
-                         length:4.0,
-                         id: "0-0",
-                         transitionType: 1, transitionTime: 1.0, clipLayer: 1,
-                         fadeInTransitionType: 0,
-                         fadeInTransitionTime: 1,
-                        transitionFadeType: false,
-                        fractalInitialZoom: 0.0125,
-                        fractalX: -.95,
-                        fractalY: -.25,
-                        invertFractal: false,
-                        pageCurlDir: 45,
-                        pageCurlRadius: .1,
-                         clipType:"image"});
-    updateTimeline();
+    var reader = new FileReader();
+    var defaultTx = await fetch("sky.png");
+    reader.readAsDataURL(await defaultTx.blob());
+    reader.addEventListener("load", (e) => {
+        sequence[0].push({name:"sky",
+                            imgData:e.target.result,
+                            texture:texture2,
+                            startTime:0,
+                            length:4.0,
+                            id: "0-0",
+                            transitionType: 1, transitionTime: 1.0, clipLayer: 1,
+                            fadeInTransitionType: 0,
+                            fadeInTransitionTime: 1,
+                            transitionFadeType: false,
+                            fractalInitialZoom: 0.0125,
+                            fractalX: -.95,
+                            fractalY: -.25,
+                            invertFractal: false,
+                            pageCurlDir: 45,
+                            pageCurlRadius: .1,
+                            clipType:"image"});
+        updateTimeline();
+    });
+
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
     let then = 0;
+    let errorPopup = document.getElementById("errorPopup");
 
     outGif.on('progress', function(progress) {
         console.warn("progress")
         console.warn(progress);
 
         let progressBarSearch = document.getElementById("viewport");
+
+        errorPopup.style.display = 'block';
+        errorPopup.innerHTML = '';
+        let successMessage = document.createElement("p");
+        let successMessageHeader = document.createElement("div");
+        let successMessageHeaderText = document.createElement("h1");
+        successMessageHeader.className="popupHeader";
+        successMessageHeaderText.innerHTML = "RENDERING"
+        successMessage.innerHTML = `${(progress * 100).toFixed(4)}`;
+        successMessageHeader.appendChild(successMessageHeaderText);
+        errorPopup.appendChild(successMessageHeader);
+        errorPopup.appendChild(successMessage);
+        errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
 
         if(progressBarSearch) {
             //progressBarSearch.style.background=`radial-gradient(circle at center, rgb(169, 78, 255) ${progress * 100}%, url('/my-graphics-demos/uipamnel1.png') ${100 - (progress * 100)}%)`;
@@ -550,8 +572,8 @@ function main() {
         gifProcessing = false;
         document.getElementById("sequencerStartStop").disabled = false;
         document.getElementById("sequencerRestart").disabled = false;
-        let errorPopup = document.getElementById("errorPopup");
         if(errorPopup) {
+            errorPopup.innerHTML = '';
             errorPopup.style.display = 'block';
             let successMessage = document.createElement("p");
             let successMessageHeader = document.createElement("div");
@@ -562,12 +584,14 @@ function main() {
             successMessageHeader.appendChild(successMessageHeaderText);
             errorPopup.appendChild(successMessageHeader);
             errorPopup.appendChild(successMessage);
+            errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
             setTimeout(() => {
                 errorPopup.innerHTML = "";
                 errorPopup.style.display = 'none';
-                document.getElementById("exportProgressBar").remove();
+                document.getElementById("viewport").style.background = ""
             }, 5000)
         }
+        outGif.running = false;
     });
 
     function render(now) {
@@ -604,6 +628,18 @@ function main() {
                         needCapture = true;
                     }
                 });
+                errorPopup.style.display = 'block';
+                errorPopup.innerHTML = '';
+                let successMessage = document.createElement("p");
+                let successMessageHeader = document.createElement("div");
+                let successMessageHeaderText = document.createElement("h1");
+                successMessageHeader.className="popupHeader";
+                successMessageHeaderText.innerHTML = "CAPTURING FRAMES";
+                successMessage.innerHTML = `${finalFrames.length} / ${requestedCaptureFrames} stored...`;
+                successMessageHeader.appendChild(successMessageHeaderText);
+                errorPopup.appendChild(successMessageHeader);
+                errorPopup.appendChild(successMessage);
+                errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
             }
         } else {
             let exportType = document.getElementById("outputTypeInput").value;
@@ -780,7 +816,7 @@ function updateSequenceTimelineRuler() {
     for(let i = 0; i<ticks; i++) {
         let tickMarkElement = document.createElement("div");
         tickMarkElement.className = "sequenceTimelineRulerTick"; 
-        tickMarkElement.style.left = (i*pixelsPerSecond)+10;
+        tickMarkElement.style.left = 10 + (i*pixelsPerSecond)+ruler.offsetLeft;
 
         if(i % 5 == 0) {
             let tickLabel = document.createElement("p");
@@ -797,13 +833,14 @@ function createNewSequenceItem(sequenceItem, gapBefore = false) {
     let curLayer = document.getElementById(`clipLayer${sequenceItem.clipLayer}`);
     if(sequenceItem.clipType == "image") {
         let nameThumbnailContainer = document.createElement("div");
-        let sequenceThumbnail = document.createElement("img")
+        let sequenceThumbnail = document.createElement("img");
         let sequenceItemName = document.createElement("p");
         newSequenceItem.className = "sequenceItemPlaceholder";
         newSequenceItem.style.background = `linear-gradient(to right, rgb(0, 255, 13) ${((sequenceItem.length - sequenceItem.transitionTime) / sequenceItem.length) * 100}%, rgb(41, 0, 79))`;
         sequenceItemName.innerHTML = sequenceItem.name;
         sequenceItemName.className = "sequenceItemName";
         sequenceThumbnail.className = "sequenceThumbnail";
+        sequenceThumbnail.src=sequenceItem.imgData;
         newSequenceItem.id = sequenceItem.id;
         nameThumbnailContainer.className="clipNameThumbContainer";
         nameThumbnailContainer.appendChild(sequenceItemName);
@@ -854,6 +891,7 @@ function getGapsBeforeClip(layerIdx, clipIdx) {
 
 let resizingClip = false;
 let movingClip = false;
+let scrubbingTimelineRuler = false;
 let gapInserted = false;
 let newGap = false; // track if gap was added during move.. cur selected is destroyed and index is updated
 let lastClipEndTime = -1;
@@ -991,6 +1029,10 @@ document.addEventListener("pointermove", function(e) {
             }
         }
         updateClipStartTimeInputValue(curClip.startTime);
+    } else if(scrubbingTimelineRuler) {
+        let timelineRuler = document.getElementById("timelineRuler");
+        globalTime = (e.clientX - timelineRuler.offsetLeft) / pixelsPerSecond;
+        updateSequenceMarkerPosition();
     }
 });
 
@@ -1011,6 +1053,9 @@ document.addEventListener("pointerup", function(e) {
         secondsMoved = 0;
         lastClipEndTime = -1;
         console.warn("MOVE COMPLETE");
+    }
+    if(scrubbingTimelineRuler) {
+        scrubbingTimelineRuler = false;
     }
 });
 
@@ -1442,7 +1487,7 @@ function appendClipToLayer(newLayerIdx, newClipData) { // simply push to sequenc
 }
 
 function updateSequenceMarkerPosition() { 
-    document.getElementById("sequenceMarker").style.left = 30 + (globalTime * pixelsPerSecond) + getSequencerOffset();
+    document.getElementById("sequenceMarker").style.left = 10 + (globalTime * pixelsPerSecond) + getSequencerOffset();
 }
 
 function redrawSequenceMarker() {
@@ -1647,6 +1692,14 @@ document.getElementById("closePopup4Button")?.addEventListener("click", function
 document.getElementById("sequencerTimeline").addEventListener("scroll", function(e) {
     document.getElementById("timelineRuler").style.top = `${window.visualViewport.offsetTop}px`;
 });
+
+document.getElementById("timelineRuler").addEventListener("pointerdown", function(e) {
+    scrubbingTimelineRuler = true;
+});
+
+window.addEventListener("resize", () => {
+    updateSequenceTimelineRuler();
+})
 
 function openTimelineHelpPopup() {
     document.getElementById("helpPopup1").style.display = "block";
