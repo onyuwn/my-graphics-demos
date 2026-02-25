@@ -606,6 +606,7 @@ function main() {
                 });
             }
         } else {
+            let exportType = document.getElementById("outputTypeInput").value;
             if(outGif.frames.length >= requestedCaptureFrames && gifRendering == false && gifProcessing == true) {
                 gifRendering = true;
                 console.warn("GIFF");
