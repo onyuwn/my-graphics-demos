@@ -634,10 +634,14 @@ async function main() {
                         errorPopup.style.display = 'none';
                         document.getElementById("viewport").style.background = ""
                     }, 5000);
+                    isPlaying = false;
+                    globalTime = 0;
+                    document.getElementById("sequencerStartStop").disabled = false;
+                    document.getElementById("sequencerRestart").disabled = false;
                 });
 
                 var downloadLink = document.createElement('a')
-                downloadLink.setAttribute('download',`jakehsequencer${new Date(Date.now()).toISOString().replace(":","")}`) ;
+                downloadLink.setAttribute('download',`jakehsequencer${new Date(Date.now()).toISOString().replace(":","")}.${outputVideoType}`) ;
                 recording.then(url => {
                 downloadLink.setAttribute('href', url) 
                     downloadLink.click()
@@ -1615,19 +1619,37 @@ document.getElementById("sequenceItemInput").addEventListener("change", function
 
 document.getElementById("imageSequenceInput").addEventListener("change", function(e) {
     let files = e.target.files;
+    let readers = [];
     let confirmationResult = showImageSequenceSettings(files.length);
+
+    function readFile(file) {
+        return new Promise(function(res, rej) {
+            let reader = new FileReader();
+            reader.addEventListener("load", function(e) {
+                res(e.target.result);
+            });
+            reader.readAsDataURL(file);
+        });
+    }
 
     confirmationResult.then((result)=>{
         if(files && files.length > 0) {
             for(let i = 0; i < files.length; i++) {
-                var reader = new FileReader();
-                reader.addEventListener("load", function(e) {
-                    const newTexture = loadTexture(glContext, e.target.result);
-                    addItemToSequence(files[i], newTexture, e.target.result, 0, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);
-                });
-                reader.readAsDataURL(files[i]);
+                // var reader = new FileReader();
+                // reader.addEventListener("load", function(e) {
+                //     const newTexture = loadTexture(glContext, e.target.result);
+                //     addItemToSequence(files[i], newTexture, e.target.result, 0, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);
+                // });
+                // reader.readAsDataURL(files[i]);
+                readers.push(readFile(files[i]));
             }
         }
+        Promise.all(readers).then((values) => {
+            for(let i = 0; i < values.length; i++) {
+                const newTexture = loadTexture(glContext, values[i]);
+                addItemToSequence(files[i], newTexture, values[i], 1, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);           
+            }
+        });
     }).catch(()=>{
         document.getElementById("imageSequenceConfirmationContainer").remove();
         e.target.value = undefined;
