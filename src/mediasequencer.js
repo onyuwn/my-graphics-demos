@@ -736,16 +736,16 @@ let defaultLength = 4.0;
 let defaultTransitionTime = 1.0;
 let selectedSequenceItem = undefined;
 
-function addItemToSequence(file, texture, imgData, layer) {
+function addItemToSequence(file, texture, imgData, layer, clipLength=defaultLength, transitionTime=defaultTransitionTime, transitionType=0, fadeInTime=1, fadeInTransitionType=0) {
     let newItem = {
         name:file.name,
         texture:texture,
         imgData:imgData,
         startTime:getLayerLength(layer),
-        length:defaultLength,
+        length:clipLength,
         id:`${layer}-${sequence[layer].length.valueOf()}`,
-        transitionType: 0,
-        transitionTime: defaultTransitionTime,
+        transitionType: transitionType,
+        transitionTime: transitionTime,
         transitionFadeType: false,
         fractalInitialZoom: 0.0125,
         fractalX: -.95,
@@ -755,8 +755,8 @@ function addItemToSequence(file, texture, imgData, layer) {
         clipLayer: layer + 1,
         clipEffect: 0,
         clipEffectIntensity: 1.0,
-        fadeInTransitionType: 0,
-        fadeInTransitionTime: 1,
+        fadeInTransitionType: fadeInTransitionType,
+        fadeInTransitionTime: fadeInTime,
         clipType: "image", // can be image or gap
         pageCurlDir: 45,
         pageCurlRadius: .1
@@ -1612,6 +1612,116 @@ document.getElementById("sequenceItemInput").addEventListener("change", function
         reader.readAsDataURL(file);
     }
 });
+
+document.getElementById("imageSequenceInput").addEventListener("change", function(e) {
+    let files = e.target.files;
+    let confirmationResult = showImageSequenceSettings(files.length);
+
+    confirmationResult.then((result)=>{
+        if(files && files.length > 0) {
+            for(let i = 0; i < files.length; i++) {
+                var reader = new FileReader();
+                reader.addEventListener("load", function(e) {
+                    const newTexture = loadTexture(glContext, e.target.result);
+                    addItemToSequence(files[i], newTexture, e.target.result, 0, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);
+                });
+                reader.readAsDataURL(files[i]);
+            }
+        }
+    }).catch(()=>{
+        document.getElementById("imageSequenceConfirmationContainer").remove();
+        e.target.value = undefined;
+    });
+});
+
+function showImageSequenceSettings(fileCount) {
+    let confirmationContainer = document.createElement("div");
+    confirmationContainer.id="imageSequenceConfirmationContainer";
+    confirmationContainer.className="smallMessage";
+    confirmationContainer.style.display = 'block';
+    confirmationContainer.innerHTML = '';
+    let successMessage = document.createElement("p");
+    let successMessageHeader = document.createElement("div");
+    let successMessageHeaderText = document.createElement("h1");
+    successMessageHeader.className="popupHeader";
+    successMessageHeaderText.innerHTML = "Image Sequence Settings";
+    successMessage.innerHTML = `You are about to add ${fileCount} images.`;
+    successMessageHeader.appendChild(successMessageHeaderText);
+    confirmationContainer.appendChild(successMessageHeader);
+    confirmationContainer.appendChild(successMessage);
+    setTimeout(() => {
+        confirmationContainer.style.left = `calc(50% - ${confirmationContainer.offsetWidth / 2}px)`;
+    }, 200);
+
+    let clipLengthInputContainer = document.createElement("div");
+    clipLengthInputContainer.style.display="flex";
+    clipLengthInputContainer.className = "sequenceInfoItem";
+    let clipLengthInputLabel = document.createElement("p");
+    clipLengthInputLabel.innerHTML="Clip Length";
+    let clipLengthInput = document.createElement("input");
+    clipLengthInput.value = 4;
+    clipLengthInput.type="number";
+    clipLengthInputContainer.appendChild(clipLengthInputLabel);
+    clipLengthInputContainer.appendChild(clipLengthInput);
+    confirmationContainer.appendChild(clipLengthInputContainer);
+
+    let transitionLengthInputContainer = document.createElement("div");
+    transitionLengthInputContainer.style.display="flex";
+    transitionLengthInputContainer.className = "sequenceInfoItem";
+    let transitionLengthInputLabel = document.createElement("p");
+    transitionLengthInputLabel.innerHTML="Transition Length";
+    let transitionLengthInput = document.createElement("input");
+    transitionLengthInput.value = 1;
+    transitionLengthInput.type="number";
+    transitionLengthInputContainer.appendChild(transitionLengthInputLabel);
+    transitionLengthInputContainer.appendChild(transitionLengthInput);
+    confirmationContainer.appendChild(transitionLengthInputContainer);
+
+    let transitionTypeInputContainer = document.createElement("div");
+    transitionTypeInputContainer.style.display="flex";
+    transitionTypeInputContainer.className = "sequenceInfoItem";
+    let transitionTypeInputLabel = document.createElement("p");
+    transitionTypeInputLabel.innerHTML="Transition Type";
+    let transitionTypeInput = document.getElementById("transitionSelectionInput").cloneNode(true);
+    transitionTypeInputContainer.appendChild(transitionTypeInputLabel);
+    transitionTypeInputContainer.appendChild(transitionTypeInput);
+    confirmationContainer.appendChild(transitionTypeInputContainer);
+
+    let confirmationControlsContainer = document.createElement("div");
+    confirmationControlsContainer.style.display="flex";
+    let confirmButton = document.createElement("button");
+    confirmButton.innerHTML="add images";
+    confirmButton.className="controlbutton2";
+
+    let cancelButton = document.createElement("button");
+    cancelButton.innerHTML="cancel"
+    cancelButton.className="controlButton";
+
+    confirmationControlsContainer.appendChild(cancelButton);
+    confirmationControlsContainer.appendChild(confirmButton);
+    confirmationContainer.appendChild(confirmationControlsContainer);
+
+    document.body.appendChild(confirmationContainer);
+
+    return new Promise(function(res, rej) {
+        confirmButton.addEventListener("click", function() {
+            res({
+                clipLength: +(clipLengthInput.value),
+                fadeInTransitionType: 0,
+                fadeInTransitionTime: 0,
+                clipEffect: 0,
+                clipEffectIntensity: 0,
+                fadeOutTransitionType: +(transitionTypeInput.value),
+                fadeOutTransitionTime: +(transitionLengthInput.value)
+            });
+            confirmationContainer.remove();
+        });
+
+        cancelButton.addEventListener("click", function(e) {
+            rej();
+        })
+    });
+}
 
 document.getElementById("sequencerStartStop").addEventListener("click", function(e) {
     isPlaying = !isPlaying;
