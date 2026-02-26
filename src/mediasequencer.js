@@ -740,7 +740,7 @@ let defaultLength = 4.0;
 let defaultTransitionTime = 1.0;
 let selectedSequenceItem = undefined;
 
-function addItemToSequence(file, texture, imgData, layer, clipLength=defaultLength, transitionTime=defaultTransitionTime, transitionType=0, fadeInTime=1, fadeInTransitionType=0) {
+function addItemToSequence(file, texture, imgData, layer, clipLength=defaultLength, transitionTime=defaultTransitionTime, transitionType=0, fadeInTime=1, fadeInTransitionType=0, clipEffect=0) {
     let newItem = {
         name:file.name,
         texture:texture,
@@ -757,7 +757,7 @@ function addItemToSequence(file, texture, imgData, layer, clipLength=defaultLeng
         invertFractal: false,
         clipEffectControlAlpha: false,
         clipLayer: layer + 1,
-        clipEffect: 0,
+        clipEffect: clipEffect,
         clipEffectIntensity: 1.0,
         fadeInTransitionType: fadeInTransitionType,
         fadeInTransitionTime: fadeInTime,
@@ -1635,19 +1635,17 @@ document.getElementById("imageSequenceInput").addEventListener("change", functio
     confirmationResult.then((result)=>{
         if(files && files.length > 0) {
             for(let i = 0; i < files.length; i++) {
-                // var reader = new FileReader();
-                // reader.addEventListener("load", function(e) {
-                //     const newTexture = loadTexture(glContext, e.target.result);
-                //     addItemToSequence(files[i], newTexture, e.target.result, 0, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);
-                // });
-                // reader.readAsDataURL(files[i]);
                 readers.push(readFile(files[i]));
             }
         }
         Promise.all(readers).then((values) => {
             for(let i = 0; i < values.length; i++) {
                 const newTexture = loadTexture(glContext, values[i]);
-                addItemToSequence(files[i], newTexture, values[i], 1, result.clipLength, result.fadeOutTransitionTime, result.fadeOutTransitionType, result.fadeInTransitionTime, result.fadeInTransitionType);           
+                addItemToSequence(
+                    files[i], newTexture, values[i], result.clipLayer-1, result.clipLength,
+                    result.fadeOutTransitionTime, result.fadeOutTransitionType,
+                    result.fadeInTransitionTime, result.fadeInTransitionType,result.clipEffect
+                );           
             }
         });
     }).catch(()=>{
@@ -1687,6 +1685,17 @@ function showImageSequenceSettings(fileCount) {
     clipLengthInputContainer.appendChild(clipLengthInput);
     confirmationContainer.appendChild(clipLengthInputContainer);
 
+    let clipEffectInputContainer = document.createElement("div");
+    clipEffectInputContainer.style.display="flex";
+    clipEffectInputContainer.className = "sequenceInfoItem";
+    let clipEffectInputLabel = document.createElement("p");
+    clipEffectInputLabel.innerHTML="Clip Effect";
+    let clipEffectInput = document.getElementById("clipEffectInput").cloneNode(true);
+    clipEffectInput.id="clipEffectInput2";
+    clipEffectInputContainer.appendChild(clipEffectInputLabel);
+    clipEffectInputContainer.appendChild(clipEffectInput);
+    confirmationContainer.appendChild(clipEffectInputContainer);
+
     let transitionLengthInputContainer = document.createElement("div");
     transitionLengthInputContainer.style.display="flex";
     transitionLengthInputContainer.className = "sequenceInfoItem";
@@ -1705,9 +1714,22 @@ function showImageSequenceSettings(fileCount) {
     let transitionTypeInputLabel = document.createElement("p");
     transitionTypeInputLabel.innerHTML="Transition Type";
     let transitionTypeInput = document.getElementById("transitionSelectionInput").cloneNode(true);
+    transitionTypeInput.id="transitionTypeInput2";
     transitionTypeInputContainer.appendChild(transitionTypeInputLabel);
     transitionTypeInputContainer.appendChild(transitionTypeInput);
     confirmationContainer.appendChild(transitionTypeInputContainer);
+
+    let clipLayerInputContainer = document.createElement("div");
+    clipLayerInputContainer.style.display="flex";
+    clipLayerInputContainer.className = "sequenceInfoItem";
+    let clipLayerInputLabel = document.createElement("p");
+    clipLayerInputLabel.innerHTML="Clip Layer";
+    let clipLayerInput = document.createElement("input");
+    clipLayerInput.value = 1;
+    clipLayerInput.type="number";
+    clipLayerInputContainer.appendChild(clipLayerInputLabel);
+    clipLayerInputContainer.appendChild(clipLayerInput);
+    confirmationContainer.appendChild(clipLayerInputContainer);
 
     let confirmationControlsContainer = document.createElement("div");
     confirmationControlsContainer.style.display="flex";
@@ -1731,10 +1753,11 @@ function showImageSequenceSettings(fileCount) {
                 clipLength: +(clipLengthInput.value),
                 fadeInTransitionType: 0,
                 fadeInTransitionTime: 0,
-                clipEffect: 0,
+                clipEffect: +(clipEffectInput.value),
                 clipEffectIntensity: 0,
                 fadeOutTransitionType: +(transitionTypeInput.value),
-                fadeOutTransitionTime: +(transitionLengthInput.value)
+                fadeOutTransitionTime: +(transitionLengthInput.value),
+                clipLayer: +(clipLayerInput.value)
             });
             confirmationContainer.remove();
         });
