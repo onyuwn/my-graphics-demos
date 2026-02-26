@@ -426,6 +426,8 @@ let outGif = new GIF({
 });
 
 let frameRate = 15;
+let gifQuality = 10;
+let outputVideoType = "mp4";
 
 async function main() {
     const canvas = document.querySelector("#gl-canvas");
@@ -549,10 +551,7 @@ async function main() {
     outGif.on('error', function(error) {
         let errorPopup = document.getElementById("errorPopup");
         if(errorPopup) {
-            errorPopup.style.display = 'block';
-            let errorMessage = document.createElement(p);
-            errorMessage.innerHTML = `An error has occured during export ${error.toString()}`;
-            errorPopup.appendChild(errorMessage);
+            updateStatusPopup(SUCCESS, `An error has occured during export ${error.toString()}`);
             setTimeout(() => {
                 errorPopup.innerHTML = "";
                 errorPopup.style.display = 'none';
@@ -573,27 +572,15 @@ async function main() {
         document.getElementById("sequencerStartStop").disabled = false;
         document.getElementById("sequencerRestart").disabled = false;
         if(errorPopup) {
-            errorPopup.innerHTML = '';
-            errorPopup.style.display = 'block';
-            let successMessage = document.createElement("p");
-            let successMessageHeader = document.createElement("div");
-            let successMessageHeaderText = document.createElement("h1");
-            successMessageHeader.className="popupHeader";
-            successMessageHeaderText.innerHTML = "SUCCESS"
-            successMessage.innerHTML = `Your gif is ready!!! It should have started downloading. If not, click the download button.`;
-            successMessageHeader.appendChild(successMessageHeaderText);
-            errorPopup.appendChild(successMessageHeader);
-            errorPopup.appendChild(successMessage);
-            errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
+            updateStatusPopup(SUCCESS, `Your gif is ready!!! It should have started downloading. If not, click the download button.`);
             setTimeout(() => {
                 errorPopup.innerHTML = "";
                 errorPopup.style.display = 'none';
                 document.getElementById("viewport").style.background = ""
-            }, 5000)
+            }, 5000);
         }
         outGif.running = false;
     });
-
     function render(now) {
         now *= 0.001; // convert to seconds
         deltaTime = now - then;
@@ -612,37 +599,51 @@ async function main() {
         document.getElementById("timeValue").innerHTML = globalTime.toFixed(4);
 
         if(needCapture == true) {
-            needCapture = false;
-            drawScene(gl, programInfo, buffers, sequence, globalTime, deltaTime);
-            if(finalFrames.length < requestedCaptureFrames) {
-                canvas.toBlob((blob) => {
-                    //window.URL.createObjectURL(blob);
-                    finalFrames.push(blob);
-                    globalTime = getTotalSequenceLength() * (finalFrames.length / requestedCaptureFrames);
-                    const img = new Image();
-                    img.src = URL.createObjectURL(blob);
+            if(getSequenceOutputType() == "gif") {
+                needCapture = false;
+                drawScene(gl, programInfo, buffers, sequence, globalTime, deltaTime);
+                if(finalFrames.length < requestedCaptureFrames) {
+                    canvas.toBlob((blob) => {
+                        //window.URL.createObjectURL(blob);
+                        finalFrames.push(blob);
+                        globalTime = getTotalSequenceLength() * (finalFrames.length / requestedCaptureFrames);
+                        const img = new Image();
+                        img.src = URL.createObjectURL(blob);
 
-                    img.onload = () => {
-                        let frameDelay = (getTotalSequenceLength() * 1000) / requestedCaptureFrames;
-                        outGif.addFrame(img, {delay: Math.round(frameDelay)});
-                        needCapture = true;
-                    }
+                        img.onload = () => {
+                            let frameDelay = (getTotalSequenceLength() * 1000) / requestedCaptureFrames;
+                            outGif.addFrame(img, {delay: Math.round(frameDelay)});
+                            needCapture = true;
+                        }
+                    });
+                    updateStatusPopup("CAPTURING FRAMES", `${finalFrames.length} / ${requestedCaptureFrames} stored...`);
+                }
+            } else if(getSequenceOutputType()=="video") {
+                needCapture = false;
+                console.warn("recording!!!");
+                updateStatusPopup("Rendering video...", `rendering ${getTotalSequenceLength()}s long video (${outputVideoType}) @ ${frameRate} fps`)
+                let recording = recordVideo(canvas, getTotalSequenceLength() * 1000, frameRate, outputVideoType);
+                globalTime = 0;
+                isPlaying = true;
+                var resultVideo = document.createElement('video')
+                recording.then((url) => {
+                    resultVideo.setAttribute('src', url);
+                    updateStatusPopup("Success!!", "Video successfully rendered. Download should begin automatically...");
+                    setTimeout(() => {
+                        errorPopup.innerHTML = "";
+                        errorPopup.style.display = 'none';
+                        document.getElementById("viewport").style.background = ""
+                    }, 5000);
                 });
-                errorPopup.style.display = 'block';
-                errorPopup.innerHTML = '';
-                let successMessage = document.createElement("p");
-                let successMessageHeader = document.createElement("div");
-                let successMessageHeaderText = document.createElement("h1");
-                successMessageHeader.className="popupHeader";
-                successMessageHeaderText.innerHTML = "CAPTURING FRAMES";
-                successMessage.innerHTML = `${finalFrames.length} / ${requestedCaptureFrames} stored...`;
-                successMessageHeader.appendChild(successMessageHeaderText);
-                errorPopup.appendChild(successMessageHeader);
-                errorPopup.appendChild(successMessage);
-                errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
+
+                var downloadLink = document.createElement('a')
+                downloadLink.setAttribute('download',`jakehsequencer${new Date(Date.now()).toISOString().replace(":","")}`) ;
+                recording.then(url => {
+                downloadLink.setAttribute('href', url) 
+                    downloadLink.click()
+                })
             }
         } else {
-            let exportType = document.getElementById("outputTypeInput").value;
             if(outGif.frames.length >= requestedCaptureFrames && gifRendering == false && gifProcessing == true) {
                 gifRendering = true;
                 console.warn("GIFF");
@@ -655,6 +656,47 @@ async function main() {
     requestAnimationFrame(render);
 }
 main();
+
+function updateStatusPopup(header, message) {
+    errorPopup.style.display = 'block';
+    errorPopup.innerHTML = '';
+    let successMessage = document.createElement("p");
+    let successMessageHeader = document.createElement("div");
+    let successMessageHeaderText = document.createElement("h1");
+    successMessageHeader.className="popupHeader";
+    successMessageHeaderText.innerHTML = header;
+    successMessage.innerHTML = message;
+    successMessageHeader.appendChild(successMessageHeaderText);
+    errorPopup.appendChild(successMessageHeader);
+    errorPopup.appendChild(successMessage);
+    errorPopup.style.left = `calc(50% - ${errorPopup.offsetWidth / 2}px)`;
+}
+
+function recordVideo(canvas, time, fps, type) {
+    var recordedChunks = [];
+    return new Promise(function(res, rej) {
+        let stream = canvas.captureStream(fps);
+        let mimeType = "video/webm; codecs=vp9";
+        if(type=="mp4") {
+            mimeType = "video/mp4";
+        }
+
+        let mediaRecorder = new MediaRecorder(stream, {mimeType: mimeType});
+        mediaRecorder.start(time || 4000); // not sure what going on here
+        mediaRecorder.ondataavailable=function(e) {
+            recordedChunks.push(e.data);
+            if(mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        }
+
+        mediaRecorder.onstop = function(e) {
+            var blob = new Blob(recordedChunks, {type:mimeType.split(";")[0]});
+            var url = URL.createObjectURL(blob);
+            res(url);
+        }
+    })
+}
 
 function getImgDataFromFile(fileName) {
     //var file = new File(fileName);
@@ -1213,6 +1255,40 @@ function hideFadeInStyleSection() {
     transitionStyleSection.innerHTML = "";
 }
 
+function showOutputTypeSpecificSettings(outputType) {
+    let optsSection = document.getElementById("outputTypeOptions");
+    optsSection.innerHTML="";
+    if(outputType == "gif") {
+        // quality slider
+        let qualityInputContainer = document.createElement("div");
+        let qualityInput = document.createElement("input");
+        qualityInput.type = "number";
+    } else if(outputType == "video") {
+        let containerTypeInputContainer = document.createElement("div");
+        containerTypeInputContainer.className="renderSettingsItem";
+        let containerTypeSelect = document.createElement("select");
+        let mp4Option = document.createElement("option");
+        mp4Option.value="mp4";
+        mp4Option.innerHTML = "MP4";
+        let webmOption = document.createElement("option");
+        webmOption.value="webm";
+        webmOption.innerHTML = "WEBM"
+        containerTypeSelect.appendChild(mp4Option);
+        containerTypeSelect.appendChild(webmOption);
+        
+        let containerTypeInputLabel = document.createElement("p");
+        containerTypeInputLabel.innerHTML = "Video Type";
+        containerTypeInputContainer.appendChild(containerTypeInputLabel);
+        containerTypeInputContainer.appendChild(containerTypeSelect);
+        optsSection.appendChild(containerTypeInputContainer);
+        containerTypeSelect.addEventListener("change", function(e) {
+            outputVideoType = e.target.value;
+        });
+    } else if(outputType == "imageseq") {
+
+    }
+}
+
 function hexToRgb(hexStr) {
     let hexVal = hexStr.replace("#", '');
     let r = parseInt(hexVal.substring(0, 2), 16);
@@ -1505,7 +1581,9 @@ function exportGif() {
     globalTime = 0;
     updateSequenceMarkerPosition();
     isPlaying = false;
-    gifProcessing = true;
+    if(getSequenceOutputType() == "gif") {
+        gifProcessing = true;
+    }
     const canvas = document.querySelector("#gl-canvas");
 
     let totalSequenceLength = getTotalSequenceLength();
@@ -1593,7 +1671,9 @@ document.getElementById("frameRateInput").addEventListener("change", function(e)
 
 document.getElementById("outputWidthInput").addEventListener("change", function(e) {
     outGif.setOption("width", +(event.target.value));
+    outGif.setOption("height", +(event.target.value));
     document.getElementById("gl-canvas").style.width = `${e.target.value}px`;
+    glContext.viewport(0,0,document.getElementById("gl-canvas").clientWidth, document.getElementById("gl-canvas").clientHeight);
 });
 
 document.getElementById("viewportScale").addEventListener("input", function(e) {
@@ -1697,6 +1777,10 @@ document.getElementById("timelineRuler").addEventListener("pointerdown", functio
     scrubbingTimelineRuler = true;
 });
 
+document.getElementById("outputTypeInput").addEventListener("change", function(e) {
+    showOutputTypeSpecificSettings(e.target.value);
+});
+
 window.addEventListener("resize", () => {
     updateSequenceTimelineRuler();
 })
@@ -1755,6 +1839,10 @@ function clearAllClipLayers() {
     for(let i = 1; i < 5; i++) {
         clearClipLayer(i);
     }
+}
+
+function getSequenceOutputType() {
+    return document.getElementById("outputTypeInput").value;
 }
 
 var tl = document.getElementById("sequencerTimeline");
