@@ -8,7 +8,7 @@
             defer>
         </script>
         <meta content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" name="viewport" />
-      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-Ctrvf4Eq.js"></script>
+      <script type="module" crossorigin src="/my-graphics-demos/assets/sequencer-D6DxjUlh.js"></script>
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
       <link rel="modulepreload" crossorigin href="/my-graphics-demos/assets/gif-DsIElLlq.js">
       <link rel="stylesheet" crossorigin href="/my-graphics-demos/assets/main-Bk7AuWU9.css">
@@ -31,10 +31,10 @@
                         Add Image
                     </label>
                     <input id="sequenceItemInput" type="file" accept="image/*, .heif, .heic, image/heif, image/heic"/>
-                    <label for="sequenceItemInput" class="controlButton disabled" style="flex-grow: 1;">
+                    <label for="imageSequenceInput" class="controlButton" style="flex-grow: 1;">
                         Add Image Sequence
                     </label>
-                    <input id="sequenceItemInput" multiple webkitdirectory type="file" accept="image/*, .heif, .heic, image/heif, image/heic"/>
+                    <input id="imageSequenceInput" multiple type="file" accept="image/*, .heif, .heic, image/heif, image/heic" style="display: none;"/>
                     <a 
                         style="width:50px;height:50px;border-radius:50%;padding:2px;text-align: center;font-size: 50px;color:yellow;"
                         class="controlButton2"
@@ -193,9 +193,12 @@
                         </div>
                     </div>
                     <div id="timelineTools">
-                        <button class="controlButton">select all</button>
-                        <button class="controlButton">duplicate</button>
-                        <button class="controlButton">remove</button>
+                        <!-- <p style="width: 50px;">Clip Tools</p> -->
+                        <button class="controlButton2 disabled">select all</button>
+                        <button class="controlButton2 disabled">duplicate</button>
+                        <button class="controlButton2 disabled">remove</button>
+                        <button class="controlButton2 disabled">move up</button>
+                        <button class="controlButton2 disabled">move down</button>
                     </div>
                 </div>
                 <div class="miniPost">
