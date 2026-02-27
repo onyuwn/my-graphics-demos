@@ -660,6 +660,7 @@ async function main() {
     requestAnimationFrame(render);
 }
 main();
+showOutputTypeSpecificSettings("gif");
 
 function updateStatusPopup(header, message) {
     errorPopup.style.display = 'block';
@@ -1265,8 +1266,31 @@ function showOutputTypeSpecificSettings(outputType) {
     if(outputType == "gif") {
         // quality slider
         let qualityInputContainer = document.createElement("div");
+        let qualityInputLabel = document.createElement("p");
+        qualityInputLabel.innerHTML = "Quality *higher is worse*";
+        qualityInputContainer.className="renderSettingsItem";
+        let qualityInputValue = document.createElement("input");
+        qualityInputValue.type="number";
         let qualityInput = document.createElement("input");
-        qualityInput.type = "number";
+        qualityInput.type="range"
+        qualityInput.min = 1;
+        qualityInput.max = 10000;
+        qualityInput.step = 1;
+        qualityInput.value = 10;
+        qualityInputValue.value = 10;
+        qualityInputContainer.appendChild(qualityInputLabel);
+        qualityInputContainer.appendChild(qualityInput);
+        qualityInputContainer.appendChild(qualityInputValue);
+        qualityInput.addEventListener("input", function(e) {
+            outGif.setOption("quality", +(e.target.value));
+            qualityInputValue.value = +(e.target.value);
+        });
+
+        qualityInputValue.addEventListener("input", function(e) {
+            outGif.setOption("quality", +(e.target.value));
+            qualityInput.value = +(e.target.value);
+        });
+        optsSection.appendChild(qualityInputContainer);
     } else if(outputType == "video") {
         let containerTypeInputContainer = document.createElement("div");
         containerTypeInputContainer.className="renderSettingsItem";
