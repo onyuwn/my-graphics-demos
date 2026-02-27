@@ -1317,7 +1317,10 @@ function hideTransitionStyleSection() {
 
 function setSelectedSequenceItem(e) {
     if(selectedSequenceItem) {
+        enableClipTools();
         document.getElementById(`${selectedSequenceItem.id}`).classList.remove("selected");
+    } else {
+        disableClipTools();
     }
     clearSelection();
 
@@ -1340,6 +1343,34 @@ function setSelectedSequenceItem(e) {
         document.getElementById(`${itemId}`).classList.add("selected");
         updateSequenceInspectAttributes(selectedSequenceItem);
     }
+}
+
+function enableClipTools() {
+    document.getElementById("selectAllClipsButton").disabled = false;
+    document.getElementById("duplicateClipButton").disabled = false;
+    document.getElementById("removeClipToolButton").disabled = false;
+    document.getElementById("moveClipUpButton").disabled = false;
+    document.getElementById("moveClipDownButton").disabled = false;
+
+    document.getElementById("selectAllClipsButton").classList.remove("disabled");
+    document.getElementById("duplicateClipButton").classList.remove("disabled");
+    document.getElementById("removeClipToolButton").classList.remove("disabled");
+    document.getElementById("moveClipUpButton").classList.remove("disabled");
+    document.getElementById("moveClipDownButton").classList.remove("disabled");
+}
+
+function disableClipTools() {
+    document.getElementById("selectAllClipsButton").disabled = true;
+    document.getElementById("duplicateClipButton").disabled = true;
+    document.getElementById("removeClipToolButton").disabled = true;
+    document.getElementById("moveClipUpButton").disabled = true;
+    document.getElementById("moveClipDownButton").disabled = true;
+
+    document.getElementById("selectAllClipsButton").classList.add("disabled");
+    document.getElementById("duplicateClipButton").classList.add("disabled");
+    document.getElementById("removeClipToolButton").classList.add("disabled");
+    document.getElementById("moveClipUpButton").classList.add("disabled");
+    document.getElementById("moveClipDownButton").classList.add("disabled");
 }
 
 function setSelectedSequenceItemInternal(id) {
@@ -1935,6 +1966,285 @@ document.getElementById("timelineRuler").addEventListener("pointerdown", functio
 document.getElementById("outputTypeInput").addEventListener("change", function(e) {
     showOutputTypeSpecificSettings(e.target.value);
 });
+
+document.getElementById("removeClipToolButton").addEventListener("click", function(e) {
+    sequence[selectedSequenceItem.clipLayer - 1].splice(+(selectedSequenceItem.id.split("-")[1]), 1);
+    selectedSequenceItem = undefined;
+    clearClipLayer(1);
+    updateTimeline();
+    requestedCaptureFrames = frameRate * getTotalSequenceLength();
+});
+
+document.getElementById("moveClipUpButton").addEventListener("click", function(e) {
+    if(selectedSequenceItem.clipLayer < 4) {
+        moveClipToLayer(selectedSequenceItem.clipLayer, selectedSequenceItem.clipLayer + 1);
+    }
+});
+
+document.getElementById("moveClipDownButton").addEventListener("click", function(e) {
+    if(selectedSequenceItem.clipLayer > 1) {
+        moveClipToLayer(selectedSequenceItem.clipLayer, selectedSequenceItem.clipLayer - 1);
+    }
+});
+
+document.getElementById("addTitleButton").addEventListener("click", function(e) {
+    // open popup to configure title
+    let titleResult = showTitleCardConfigurationPopup();
+
+    titleResult.then((result) => {
+        // create new sequence item
+        addItemToSequence({name: "title"}, result.texture, result.texture, 1);
+    })
+    .catch(() => {
+        document.getElementById("titleCardConfigurationPopup").remove();
+    });
+});
+
+function showTitleCardConfigurationPopup() {
+    let titleCardConfigurationContainer = document.createElement("div");
+    titleCardConfigurationContainer.id="titleCardConfigurationPopup";
+    titleCardConfigurationContainer.className="smallMessage";
+    titleCardConfigurationContainer.style.display = "block";
+    let stagedTitleCardView = document.createElement("canvas");
+    stagedTitleCardView.style.border = "1px solid yellow";
+    let textInputContainer = document.createElement("div");
+    textInputContainer.className="sequenceInfoItem";
+    let textInputLabel = document.createElement("p");
+    textInputLabel.innerHTML="Title";
+    let textInput = document.createElement("textarea");
+    // textInput.type="text";
+    textInputContainer.appendChild(textInputLabel);
+    textInputContainer.appendChild(textInput);
+
+    titleCardConfigurationContainer.appendChild(stagedTitleCardView);
+
+    let textColorInputContainer = document.createElement("div");
+    textColorInputContainer.className="sequenceInfoItem";
+    let textColorInputLabel = document.createElement("p");
+    textColorInputLabel.innerHTML = "Text Color";
+    let textColorInput = document.createElement("input");
+    textColorInput.type="color";
+    textColorInputContainer.appendChild(textColorInputLabel);
+    textColorInputContainer.appendChild(textColorInput);
+    titleCardConfigurationContainer.appendChild(textColorInputContainer);
+
+    let backgroundColorInputContainer = document.createElement("div");
+    backgroundColorInputContainer.className="sequenceInfoItem";
+    let backgroundColorInputLabel = document.createElement("p");
+    backgroundColorInputLabel.innerHTML = "Background Color";
+    let backgroundColorEnabledInput = document.createElement("input");
+    backgroundColorEnabledInput.type = "checkbox";
+    let backgroundColorIput = document.createElement("input");
+    backgroundColorIput.type="color";
+    backgroundColorInputContainer.appendChild(backgroundColorInputLabel);
+    backgroundColorInputContainer.appendChild(backgroundColorEnabledInput);
+    backgroundColorInputContainer.appendChild(backgroundColorIput);
+    titleCardConfigurationContainer.appendChild(backgroundColorInputContainer);
+
+    let textColorHex = "#ffffff";
+
+    let fontSizeInputContainer = document.createElement("div");
+    fontSizeInputContainer.className="sequenceInfoItem";
+    let fontSizeInputLabel = document.createElement("p");
+    fontSizeInputLabel.innerHTML="Font Size";
+    let fontSizeInput = document.createElement("input");
+    fontSizeInput.type = "number";
+    fontSizeInput.value = 36;
+    fontSizeInputContainer.appendChild(fontSizeInputLabel);
+    fontSizeInputContainer.appendChild(fontSizeInput);
+    titleCardConfigurationContainer.appendChild(fontSizeInputContainer);
+
+    let titleAlignmentInputContainer = document.createElement("div");
+    titleAlignmentInputContainer.className="sequenceInfoItem";
+    let titleAlignmentLabel = document.createElement("p");
+    titleAlignmentLabel.innerHTML="Alignment";
+    let titleAlignmentInput = document.createElement("select");
+    let leftOption = document.createElement("option");
+    leftOption.value="left";
+    leftOption.innerHTML="LEFT";
+    titleAlignmentInput.appendChild(leftOption);
+    let centerOption = document.createElement("option");
+    centerOption.value="center";
+    centerOption.innerHTML="CENTER";
+    titleAlignmentInput.appendChild(centerOption);
+    let rightOption = document.createElement("option");
+    rightOption.value="right";
+    rightOption.innerHTML="RIGHT";
+    titleAlignmentInput.appendChild(rightOption);
+    titleAlignmentInputContainer.appendChild(titleAlignmentLabel);
+    titleAlignmentInputContainer.appendChild(titleAlignmentInput);
+    titleCardConfigurationContainer.appendChild(titleAlignmentInputContainer);
+
+    let titleBaselineInputContainer = document.createElement("div");
+    titleBaselineInputContainer.className="sequenceInfoItem";
+    let titleBaselineInputLabel = document.createElement("p");
+    titleBaselineInputLabel.innerHTML="Baseline";
+    let titleBaselineInput = document.createElement("select");
+    let topOption = document.createElement("option");
+    topOption.value="top";
+    topOption.innerHTML="TOP";
+    titleBaselineInput.appendChild(topOption);
+    let baselineCenterOption = document.createElement("option");
+    baselineCenterOption.value="center";
+    baselineCenterOption.innerHTML="CENTER";
+    titleBaselineInput.appendChild(baselineCenterOption);
+    let bottomOption = document.createElement("option");
+    bottomOption.value="bottom";
+    bottomOption.innerHTML="BOTTOM";
+    titleBaselineInput.appendChild(bottomOption);
+    titleBaselineInputContainer.appendChild(titleBaselineInputLabel);
+    titleBaselineInputContainer.appendChild(titleBaselineInput);
+    titleCardConfigurationContainer.appendChild(titleBaselineInputContainer);
+
+    let titlePositionInputContainer = document.createElement("div");
+    titlePositionInputContainer.className="sequenceInfoItem";
+    let titlePositionLabel = document.createElement("p");
+    fontSizeInputLabel.innerHTML="Font Size";
+    let titleXPosInput = document.createElement("input");
+    let titleYPosInput = document.createElement("input");
+    titleXPosInput.type = "number";
+    titleXPosInput.value = 256;
+    titleYPosInput.type = "number";
+    titleYPosInput.value = 256;
+    titlePositionInputContainer.appendChild(titlePositionLabel);
+    titlePositionInputContainer.appendChild(titleXPosInput);
+    titlePositionInputContainer.appendChild(titleYPosInput);
+    titleCardConfigurationContainer.appendChild(titlePositionInputContainer);
+
+    let fontSize = 36;
+    let titleText = "";
+    let titleAlignment = "center";
+    let titleBaseline = "middle";
+    let titleXPos = 256;
+    let titleYPos = 256;
+    let hasBackground = false;
+    let backgroundColor = "#ffffff";
+    
+    let angelicPeace = new FontFace("angelicPeace", "url('/my-graphics-demos/Angelic Peace.ttf')");
+    let textCtx = stagedTitleCardView.getContext("2d");
+
+    function updatePreviewCanvas() {
+        textCtx.canvas.height=256;
+        textCtx.canvas.width=256;
+        textCtx.font = `${fontSize}px angelicPeace`;
+        textCtx.textAlign = titleAlignment;
+        textCtx.textBaseline = titleBaseline;
+        textCtx.clearRect(0, 0, textCtx.canvas.width, textCtx.canvas.height);
+        let lines = titleText.split("\n");
+        if(hasBackground == true) {
+            textCtx.fillStyle = backgroundColor;
+            textCtx.fillRect(
+                (titleXPos / 2) - ((fontSize * titleText.length) / 2),
+                (titleYPos / 2) - ((fontSize) / 2),
+                titleText.length * fontSize, fontSize * lines.length
+            );
+        }
+        textCtx.fillStyle = textColorHex;
+        if(lines && lines.length > 0) {
+            for(let i = 0; i < lines.length; i++) {
+                textCtx.fillText(lines[i], titleXPos / 2, (titleYPos / 2) + (i * (fontSize + 2.5)));
+            }
+        } else {
+            textCtx.fillText(titleText, titleXPos / 2, titleYPos / 2);
+        }
+    }
+
+    fontSizeInput.addEventListener("input", function(e) {
+        fontSize = +(e.target.value);
+        updatePreviewCanvas();
+    });
+
+    titleXPosInput.addEventListener("input", function(e) {
+        titleXPos = +(e.target.value);
+        updatePreviewCanvas();
+    });
+
+    titleYPosInput.addEventListener("input", function(e) {
+        titleYPos = +(e.target.value);
+        updatePreviewCanvas();
+    });
+
+    angelicPeace.load().then(() => {
+        textInput.addEventListener("input", function(e) {
+            titleText = e.target.value;
+            updatePreviewCanvas();
+        });
+    });
+
+    titleAlignmentInput.addEventListener("change", function(e) {
+        titleAlignment = e.target.value;
+        updatePreviewCanvas();
+    });
+
+    titleBaselineInput.addEventListener("change", function(e) {
+        titleBaseline = e.target.value;
+        updatePreviewCanvas();
+    });
+
+    textColorInput.addEventListener("change", function(e) {
+        let hexVal = e.target.value;
+        let rgb = hexToRgb(hexVal);
+        console.warn(hexVal);
+        textColorHex = hexVal;
+        updatePreviewCanvas();
+    });
+
+    backgroundColorIput.addEventListener("change", function(e) {
+        let hexVal = e.target.value;
+        let rgb = hexToRgb(hexVal);
+        console.warn(hexVal);
+        backgroundColor = hexVal;
+        updatePreviewCanvas();
+    });
+
+    backgroundColorEnabledInput.addEventListener("change", function(e) {
+        hasBackground = e.target.checked;
+        updatePreviewCanvas();
+    })
+
+    titleCardConfigurationContainer.appendChild(textInputContainer);
+    let cancelButton = document.createElement("button");
+    cancelButton.innerHTML = "cancel";
+    cancelButton.className = "controlButton2";
+    let confirmButton = document.createElement("button");
+    confirmButton.innerHTML = "add title";
+    confirmButton.className = "controlButton2";
+    titleCardConfigurationContainer.appendChild(cancelButton);
+    titleCardConfigurationContainer.appendChild(confirmButton);
+    setTimeout(() => {
+        titleCardConfigurationContainer.style.left = `calc(50% - ${titleCardConfigurationContainer.offsetWidth / 2}px)`;
+    }, 200);
+    document.body.appendChild(titleCardConfigurationContainer);
+    return new Promise(function(res, rej) {
+        confirmButton.addEventListener("click", function() {
+            var textTex = glContext.createTexture();
+            glContext.bindTexture(glContext.TEXTURE_2D, textTex);
+            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, textCtx.canvas);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+            res({
+                texture: textTex
+            });
+            titleCardConfigurationContainer.remove();
+        });
+
+        cancelButton.addEventListener("click", function(e) {
+            rej();
+        })
+    });
+}
+
+function moveClipToLayer(oldLayerIdx, newLayerIdx) {
+    let parts = selectedSequenceItem.id.split("-");
+    let layerIdx = +(parts[0]);
+    let clipIdx = +(parts[1]);
+    selectedSequenceItem.clipLayer = +(newLayerIdx);
+    clearAllClipLayers();
+    let removed = removeClipFromLayer(oldLayerIdx - 1, clipIdx);
+    appendClipToLayer(newLayerIdx - 1, removed);
+    updateTimeline();
+}
 
 window.addEventListener("resize", () => {
     updateSequenceTimelineRuler();

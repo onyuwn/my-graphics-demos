@@ -422,6 +422,11 @@ h1 {
     height: 25px;
 }
 
+#timelineTools {
+    max-height: 130px;
+    overflow: auto;
+}
+
 .sequenceTimelineRulerTick {
     position:absolute;
     width: 4px;
