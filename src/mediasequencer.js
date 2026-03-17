@@ -1290,7 +1290,7 @@ function showOutputTypeSpecificSettings(outputType) {
             outGif.setOption("quality", +(e.target.value));
             qualityInput.value = +(e.target.value);
         });
-        optsSection.appendChild(qualityInputContainer);
+        //optsSection.appendChild(qualityInputContainer); // will probably just fuck shit up
     } else if(outputType == "video") {
         let containerTypeInputContainer = document.createElement("div");
         containerTypeInputContainer.className="renderSettingsItem";
@@ -1366,6 +1366,11 @@ function setSelectedSequenceItem(e) {
         selectedSequenceItem = sequence[selectedItemLayerIndex][selectedItemClipIndex];
         document.getElementById(`${itemId}`).classList.add("selected");
         updateSequenceInspectAttributes(selectedSequenceItem);
+    }
+    if(selectedSequenceItem) {
+        enableClipTools();
+    } else {
+        disableClipTools();
     }
 }
 
