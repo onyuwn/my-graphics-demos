@@ -119,7 +119,7 @@ const fragmentShaderSource = `
         bool escaped = false;
         int iterations = 0;
         for(int i = 0; i < 10000; i++) {
-            if(i > 500) break;
+            if(i > 125) break;
             z = imagine(z,c);
             iterations = i;
             if (length(z) > 2.0) {
@@ -305,6 +305,89 @@ const fragmentShaderSource = `
             } else if(clipEffect == 8) {
                 vec4 diffuse = texture2D(uSampler, rotateUv(uv, time * clipEffectIntensity, vec2(.5)));
                 gl_FragColor = diffuse;
+            } else if(clipEffect == 9) {
+                vec2 newUv = uv * vec2(time + 1.0, time + 1.0) * clipEffectIntensity * .25;
+                gl_FragColor = texture2D(uSampler,newUv);
+            } else if(clipEffect == 10) {
+                vec2 newUv = uv + vec2((time * clipEffectIntensity * .75) - 1.0, 1.0);
+                gl_FragColor = texture2D(uSampler,newUv);
+            } else if(clipEffect == 12) { // ripple 2
+                vec2 cPos = -1.0 + 2.0 * uv;
+                // distance of current pixel from center
+                float cLength = length(cPos);
+                vec2 newUv = uv+(cPos/cLength)*cos(cLength*(clipEffectIntensity * .05)-time*4.0) * 0.03;
+                gl_FragColor = texture2D(uSampler,newUv);
+                for(int i = 0; i < 100; i++) {
+                    if(i > int(5)) {
+                        break;
+                    }
+                    vec2 newUv2 = uv+(cPos/cLength)*cos(cLength*(clipEffectIntensity * float(i + 1))-time*float(i)) * 0.03;
+                    gl_FragColor += texture2D(uSampler,newUv2);
+                    if(clipEffectControlAlpha > 0) {
+                        gl_FragColor.a = 1.0 - cos(cLength*12.0-time*4.0) * 0.25 * clipEffectIntensity;
+                    }
+                }
+            } else if(clipEffect == 13) {
+                float aspect = 1.0;
+                float radius = (pageCurlRadius > 0.0) ? pageCurlRadius : .1;
+                float pi = 3.141592;
+                float t = 1.0 - ((time - transitionStart) / transitionTime);
+                //vec2 curlDir = normalize(vec2(1.0));
+
+                float xComponent = cos(pageCurlDir) * 1.141;
+                float yComponent = sin(pageCurlDir) * 1.141;
+                vec2 curlDir = vec2(1.0);
+
+                if(xComponent >= 0.0 && yComponent >= 0.0) {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                } else if(xComponent < 0.0 && yComponent >= 0.0) {
+                    curlDir = normalize(vec2(yComponent, xComponent));
+                } else if(xComponent >= 0.0 && yComponent < 0.0) {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                } else {
+                    curlDir = normalize(vec2(xComponent, yComponent));
+                }
+                vec2 origin = vec2(0.0);
+                float curlDist = length(vec2(mod(time * -3.0, 1.0)) - origin);
+                
+                if (curlDir.x < 0.)
+                {
+
+                    curlDist = length(t - origin);
+                }
+              
+                float proj = dot(uv - origin, curlDir);
+                float dist = proj - curlDist;
+                
+                vec2 linePoint = uv - dist * curlDir;
+                
+                if (dist > radius) 
+                {
+                    gl_FragColor = vec4(0.0);
+                    gl_FragColor.rgb *= pow(clamp(dist - radius, 0., 1.) * 1.5, .2);
+                }
+                else if (dist >= 0.)
+                {
+                    // map to cylinder point
+                    float theta = asin(dist / radius);
+                    vec2 p2 = linePoint + curlDir * (pi - theta) * radius;
+                    vec2 p1 = linePoint + curlDir * theta * radius;
+                    uv = (p2.x <= aspect && p2.y <= 1. && p2.x > 0. && p2.y > 0.) ? p2 : p1;
+                    gl_FragColor = texture2D(uSampler, uv * vec2(1. / aspect, 1.));
+                    gl_FragColor.rgb *= pow(clamp((radius - dist) / radius, 0., 1.), .2);
+                }
+                else 
+                {
+                    vec2 p = linePoint + curlDir * (abs(dist) + pi * radius);
+                    uv = (p.x <= aspect && p.y <= 1. && p.x > 0. && p.y > 0.) ? p : uv;
+                    gl_FragColor = texture2D(uSampler, uv * vec2(1. / aspect, 1.));
+                } 
+            } else if(clipEffect == 14) {
+                float t = (.25 * cos(time * 2.0)) + .25;
+                float zoom = .0125;
+                vec4 mandelBrotColor = mandelbrot(rotateUv(uv, time * .5, vec2(.5)), zoom * t, vec2(fractalX, fractalY), t);
+                vec4 diffuse = texture2D(uSampler, rotateUv(uv, time * .5, vec2(.5)));
+                gl_FragColor = (mandelBrotColor + vec4(.1)) * diffuse;
             }
         }
     }
@@ -391,7 +474,11 @@ function loadTexture(gl, url) {
 
       if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       } else {
+        gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -2250,8 +2337,8 @@ function showTitleCardConfigurationPopup() {
             glContext.bindTexture(glContext.TEXTURE_2D, textTex);
             glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, textCtx.canvas);
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.MIRRORED_REPEAT);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.MIRRORED_REPEAT);
             res({
                 texture: textTex
             });
